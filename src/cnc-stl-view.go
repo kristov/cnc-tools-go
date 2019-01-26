@@ -137,25 +137,25 @@ func makeMesh(solid *stl.Solid, prog uint32) Mesh {
     gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
     gl.BufferData(gl.ARRAY_BUFFER, int(4 * (nr_vertices * 3)), gl.Ptr(vertices), gl.STATIC_DRAW)
 
-	b_vertex := uint32(gl.GetAttribLocation(prog, gl.Str("b_vertex\x00")))
-	gl.EnableVertexAttribArray(b_vertex)
-	gl.VertexAttribPointer(b_vertex, 3, gl.FLOAT, false, 0, nil)
+    b_vertex := uint32(gl.GetAttribLocation(prog, gl.Str("b_vertex\x00")))
+    gl.EnableVertexAttribArray(b_vertex)
+    gl.VertexAttribPointer(b_vertex, 3, gl.FLOAT, false, 0, nil)
 
     var nbo uint32
     gl.GenBuffers(1, &nbo)
     gl.BindBuffer(gl.ARRAY_BUFFER, nbo)
     gl.BufferData(gl.ARRAY_BUFFER, int(4 * (nr_vertices * 3)), gl.Ptr(normals), gl.STATIC_DRAW)
 
-	b_normal := uint32(gl.GetAttribLocation(prog, gl.Str("b_normal\x00")))
-	gl.EnableVertexAttribArray(b_normal)
-	gl.VertexAttribPointer(b_normal, 3, gl.FLOAT, false, 0, nil)
+    b_normal := uint32(gl.GetAttribLocation(prog, gl.Str("b_normal\x00")))
+    gl.EnableVertexAttribArray(b_normal)
+    gl.VertexAttribPointer(b_normal, 3, gl.FLOAT, false, 0, nil)
 
     mesh.vao = vao
     mesh.nr_vertices = nr_vertices
 
-	gl.Enable(gl.DEPTH_TEST)
-	gl.DepthFunc(gl.LESS)
-	gl.ClearColor(1.0, 1.0, 1.0, 1.0)
+    gl.Enable(gl.DEPTH_TEST)
+    gl.DepthFunc(gl.LESS)
+    gl.ClearColor(1.0, 1.0, 1.0, 1.0)
 
     return mesh
 }
@@ -163,7 +163,7 @@ func makeMesh(solid *stl.Solid, prog uint32) Mesh {
 func basicShader() uint32 {
     prog := gl.CreateProgram()
 
-	vertexShaderSource := `
+    vertexShaderSource := `
     #version 120
 
     attribute vec3 b_vertex;
@@ -181,7 +181,7 @@ func basicShader() uint32 {
     }
 ` + "\x00"
 
-	fragmentShaderSource := `
+    fragmentShaderSource := `
     #version 120
 
     uniform mat4 m_mv;
@@ -203,7 +203,7 @@ func basicShader() uint32 {
     }
 ` + "\x00"
 
-	vertexShader, err := compileShader(vertexShaderSource, gl.VERTEX_SHADER)
+    vertexShader, err := compileShader(vertexShaderSource, gl.VERTEX_SHADER)
     if err != nil {
         panic(err)
     }
