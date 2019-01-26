@@ -1,0 +1,4 @@
+src/github.com
+src/golang.org
+pkg/linux_amd64
+bin/*
