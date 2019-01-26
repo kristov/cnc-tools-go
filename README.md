@@ -8,5 +8,6 @@ Simple STL viewer. Mouse movement rotates the part. Mouse or pad scroll to zoom 
 
   make deps
   make
+  bin/cnc-stl-view --stl=resources/cube_10x10x10.stl
 
 Note: change the value of the $(GO) variable.
