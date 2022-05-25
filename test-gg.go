@@ -104,11 +104,23 @@ func main() {
 }
 
 func draw2D(width int, height int, scale float64) {
+    polygon := [6][2]int{
+        {0,0},
+        {250,0},
+        {250,18},
+        {146,28},
+        {146,50},
+        {0,50},
+    }
     dc := gg.NewContext(width, height)
     dc.ScaleAbout(scale, scale, 0, 0)
-    dc.DrawCircle(200, 200, 200)
     dc.SetRGB(1.0, 0, 0)
-    dc.Fill()
+    dc.MoveTo(float64(polygon[0][0]), float64(polygon[0][1]))
+    for i := 1; i < 6; i++ {
+        dc.LineTo(float64(polygon[i][0]), float64(polygon[i][1]))
+    }
+    dc.LineTo(float64(polygon[0][0]), float64(polygon[0][1]))
+    dc.Stroke()
     dcimg := dc.Image()
     bounds := dcimg.Bounds()
     img := image.NewNRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
