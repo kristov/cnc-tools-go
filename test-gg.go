@@ -22,11 +22,11 @@ type Mesh struct {
 func main() {
     runtime.LockOSThread()
 
-    var winWidth int
-    var winHeight int
+    var width int
+    var height int
 
-    flag.IntVar(&winWidth, "width", 640, "Window width")
-    flag.IntVar(&winHeight, "height", 480, "Window height")
+    flag.IntVar(&width, "width", 640, "Window width")
+    flag.IntVar(&height, "height", 480, "Window height")
     flag.Parse()
 
     if err := glfw.Init(); err != nil {
@@ -34,7 +34,7 @@ func main() {
     }
     defer glfw.Terminate()
 
-    window, err := glfw.CreateWindow(winWidth, winHeight, "test", nil, nil)
+    window, err := glfw.CreateWindow(width, height, "test", nil, nil)
     if err != nil {
         panic(err)
     }
@@ -49,9 +49,9 @@ func main() {
     fmt.Fprintln(os.Stderr, "OpenGL version", version)
 
     prog := basicShader()
-    mesh := makeMesh(prog)
+    mesh := makeMesh(prog, width, height)
 
-    projection := mgl32.Perspective(mgl32.DegToRad(45.0), float32(winWidth)/float32(winHeight), 0.1, 100.0)
+    projection := mgl32.Perspective(mgl32.DegToRad(45.0), float32(width)/float32(height), 0.1, 100.0)
     view := mgl32.Ident4()
     model := mgl32.Ident4()
 
@@ -65,8 +65,8 @@ func main() {
     mvp = projection.Mul4(mv)
 
 //    window.SetCursorPosCallback(func(w *glfw.Window, xpos float64, ypos float64) {
-//        xangle := (float32(xpos) / float32(winWidth)) * 6.2831
-//        yangle := (float32(ypos) / float32(winHeight)) * 6.2831
+//        xangle := (float32(xpos) / float32(width)) * 6.2831
+//        yangle := (float32(ypos) / float32(height)) * 6.2831
 //        model = mgl32.Translate3D(-5, -5, -5)
 //        model = mgl32.HomogRotate3DY(-xangle).Mul4(model)
 //        model = mgl32.HomogRotate3DX(yangle).Mul4(model)
@@ -99,17 +99,19 @@ func main() {
     }
 }
 
-func makeMesh(prog uint32) Mesh {
+func makeMesh(prog uint32, width int, height int) Mesh {
     var mesh Mesh
+
+    aspect := float32(height) / float32(width)
 
     var nr_vertices uint32 = 6
     var vertexes = []float32{
-        -1.0, -1.0, 0.0,
-        1.0, -1.0, 0.0,
-        -1.0, 1.0, 0.0,
-        1.0, -1.0, 0.0,
-        -1.0, 1.0, 0.0,
-        1.0, 1.0, 0.0,
+        -1.0, -aspect, 0.0,
+        1.0, -aspect, 0.0,
+        -1.0, aspect, 0.0,
+        1.0, -aspect, 0.0,
+        -1.0, aspect, 0.0,
+        1.0, aspect, 0.0,
     }
     var uvs = []float32{
         0.0, 0.0,
@@ -120,8 +122,8 @@ func makeMesh(prog uint32) Mesh {
         1.0, 1.0,
     }
 
-    dc := gg.NewContext(1000, 1000)
-    dc.DrawCircle(500, 500, 400)
+    dc := gg.NewContext(width, height)
+    dc.DrawCircle(200, 200, 200)
     dc.SetRGB(1.0, 0, 0)
     dc.Fill()
     dcimg := dc.Image()
