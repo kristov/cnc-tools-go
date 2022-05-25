@@ -15,7 +15,9 @@ import (
 )
 
 type Mesh struct {
-    vao uint32
+    vertex_id uint32
+    uv_id uint32
+    tex_id uint32
     nr_vertices uint32
 }
 
@@ -73,38 +75,65 @@ func main() {
 //        mv = view.Mul4(model)
 //        mvp = projection.Mul4(mv)
 //    })
+    var scale float64 = 1.0
     window.SetScrollCallback(func(w *glfw.Window, xoff float64, yoff float64) {
-        Z = Z + (0.5 * float32(yoff))
-        fmt.Fprintln(os.Stderr, "Z", Z)
-        view = mgl32.Translate3D(0, 0, Z)
-        mv = view.Mul4(model)
-        mvp = projection.Mul4(mv)
+        if yoff > 0 {
+            scale += 0.1
+            draw2D(width, height, scale)
+        }
+        if yoff < 0 {
+            scale -= 0.1
+            draw2D(width, height, scale)
+        }
     })
 
     m_mvp_id := gl.GetUniformLocation(prog, gl.Str("m_mvp\x00"))
     m_mv_id := gl.GetUniformLocation(prog, gl.Str("m_mv\x00"))
 
+    draw2D(width, height, scale)
     for (!window.ShouldClose()) {
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         gl.UseProgram(prog)
-
         gl.UniformMatrix4fv(m_mvp_id, 1, false, &mvp[0])
         gl.UniformMatrix4fv(m_mv_id, 1, false, &mv[0])
-
-        gl.BindVertexArray(mesh.vao)
         gl.DrawArrays(gl.TRIANGLES, 0, int32(mesh.nr_vertices))
-
         glfw.PollEvents()
         window.SwapBuffers()
     }
 }
 
+func draw2D(width int, height int, scale float64) {
+    dc := gg.NewContext(width, height)
+    dc.ScaleAbout(scale, scale, 0, 0)
+    dc.DrawCircle(200, 200, 200)
+    dc.SetRGB(1.0, 0, 0)
+    dc.Fill()
+    dcimg := dc.Image()
+    bounds := dcimg.Bounds()
+    img := image.NewNRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
+    draw.Draw(img, img.Bounds(), dcimg, bounds.Min, draw.Src)
+    rebuildTexture(img)
+}
+
+func rebuildTexture(img *image.NRGBA) {
+    gl.TexImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        int32(img.Rect.Size().X),
+        int32(img.Rect.Size().Y),
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        gl.Ptr(img.Pix))
+}
+
 func makeMesh(prog uint32, width int, height int) Mesh {
     var mesh Mesh
+    mesh.nr_vertices = 6
 
     aspect := float32(height) / float32(width)
 
-    var nr_vertices uint32 = 6
     var vertexes = []float32{
         -1.0, -aspect, 0.0,
         1.0, -aspect, 0.0,
@@ -122,62 +151,37 @@ func makeMesh(prog uint32, width int, height int) Mesh {
         1.0, 1.0,
     }
 
-    dc := gg.NewContext(width, height)
-    dc.DrawCircle(200, 200, 200)
-    dc.SetRGB(1.0, 0, 0)
-    dc.Fill()
-    dcimg := dc.Image()
-    bounds := dcimg.Bounds()
-    img := image.NewNRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
-    draw.Draw(img, img.Bounds(), dcimg, bounds.Min, draw.Src)
-
     //if img.Stride != img.Rect.Size().X*4 {
     //    panic("unsupported stride")
     //}
 
-    var vao uint32
-    gl.GenVertexArrays(1, &vao)
-    gl.BindVertexArray(vao)
+    //var vao uint32
+    //gl.GenVertexArrays(1, &vao)
+    //gl.BindVertexArray(vao)
 
-    var vbo uint32
-    gl.GenBuffers(1, &vbo)
-    gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, int(4 * (nr_vertices * 3)), gl.Ptr(vertexes), gl.STATIC_DRAW)
+    gl.GenBuffers(1, &mesh.vertex_id)
+    gl.BindBuffer(gl.ARRAY_BUFFER, mesh.vertex_id)
+    gl.BufferData(gl.ARRAY_BUFFER, int(4 * (mesh.nr_vertices * 3)), gl.Ptr(vertexes), gl.STATIC_DRAW)
     b_vertex := uint32(gl.GetAttribLocation(prog, gl.Str("b_vertex\x00")))
     gl.EnableVertexAttribArray(b_vertex)
     gl.VertexAttribPointer(b_vertex, 3, gl.FLOAT, false, 0, nil)
 
-    var ubo uint32
-    gl.GenBuffers(1, &ubo)
-    gl.BindBuffer(gl.ARRAY_BUFFER, ubo)
-    gl.BufferData(gl.ARRAY_BUFFER, int(4 * (nr_vertices * 2)), gl.Ptr(uvs), gl.STATIC_DRAW)
+    gl.GenBuffers(1, &mesh.uv_id)
+    gl.BindBuffer(gl.ARRAY_BUFFER, mesh.uv_id)
+    gl.BufferData(gl.ARRAY_BUFFER, int(4 * (mesh.nr_vertices * 2)), gl.Ptr(uvs), gl.STATIC_DRAW)
     b_uv := uint32(gl.GetAttribLocation(prog, gl.Str("b_uv\x00")))
     gl.EnableVertexAttribArray(b_uv)
     gl.VertexAttribPointer(b_uv, 2, gl.FLOAT, false, 0, nil)
 
-    var tex uint32
-    gl.GenTextures(1, &tex)
+    gl.GenTextures(1, &mesh.tex_id)
     gl.ActiveTexture(gl.TEXTURE0)
-    gl.BindTexture(gl.TEXTURE_2D, tex)
+    gl.BindTexture(gl.TEXTURE_2D, mesh.tex_id)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    gl.TexImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        int32(img.Rect.Size().X),
-        int32(img.Rect.Size().Y),
-        0,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        gl.Ptr(img.Pix))
     u_tex := int32(gl.GetUniformLocation(prog, gl.Str("u_tex\x00")))
     gl.Uniform1i(u_tex, 0)
-
-    mesh.vao = vao
-    mesh.nr_vertices = nr_vertices
 
     gl.Enable(gl.DEPTH_TEST)
     gl.DepthFunc(gl.LESS)
