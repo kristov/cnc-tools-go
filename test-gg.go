@@ -15,10 +15,12 @@ import (
 )
 
 type Mesh struct {
+    program_id uint32
     vertex_id uint32
     uv_id uint32
     tex_id uint32
     nr_vertices uint32
+    scale float64
 }
 
 func main() {
@@ -50,8 +52,8 @@ func main() {
     version := gl.GoStr(gl.GetString(gl.VERSION))
     fmt.Fprintln(os.Stderr, "OpenGL version", version)
 
-    prog := basicShader()
-    mesh := makeMesh(prog, width, height)
+    initGL()
+    mesh := generateBuffers(width, height)
 
     projection := mgl32.Perspective(mgl32.DegToRad(45.0), float32(width)/float32(height), 0.1, 100.0)
     view := mgl32.Ident4()
@@ -87,13 +89,12 @@ func main() {
         }
     })
 
-    m_mvp_id := gl.GetUniformLocation(prog, gl.Str("m_mvp\x00"))
-    m_mv_id := gl.GetUniformLocation(prog, gl.Str("m_mv\x00"))
+    m_mvp_id := gl.GetUniformLocation(mesh.program_id, gl.Str("m_mvp\x00"))
+    m_mv_id := gl.GetUniformLocation(mesh.program_id, gl.Str("m_mv\x00"))
 
     draw2D(width, height, scale)
     for (!window.ShouldClose()) {
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-        gl.UseProgram(prog)
         gl.UniformMatrix4fv(m_mvp_id, 1, false, &mvp[0])
         gl.UniformMatrix4fv(m_mv_id, 1, false, &mv[0])
         gl.DrawArrays(gl.TRIANGLES, 0, int32(mesh.nr_vertices))
@@ -128,12 +129,10 @@ func rebuildTexture(img *image.NRGBA) {
         gl.Ptr(img.Pix))
 }
 
-func makeMesh(prog uint32, width int, height int) Mesh {
+func generateBuffers(width int, height int) Mesh {
     var mesh Mesh
     mesh.nr_vertices = 6
-
     aspect := float32(height) / float32(width)
-
     var vertexes = []float32{
         -1.0, -aspect, 0.0,
         1.0, -aspect, 0.0,
@@ -150,26 +149,20 @@ func makeMesh(prog uint32, width int, height int) Mesh {
         0.0, 1.0,
         1.0, 1.0,
     }
+    mesh.program_id = basicShader()
 
-    //if img.Stride != img.Rect.Size().X*4 {
-    //    panic("unsupported stride")
-    //}
-
-    //var vao uint32
-    //gl.GenVertexArrays(1, &vao)
-    //gl.BindVertexArray(vao)
-
+    gl.UseProgram(mesh.program_id)
     gl.GenBuffers(1, &mesh.vertex_id)
     gl.BindBuffer(gl.ARRAY_BUFFER, mesh.vertex_id)
     gl.BufferData(gl.ARRAY_BUFFER, int(4 * (mesh.nr_vertices * 3)), gl.Ptr(vertexes), gl.STATIC_DRAW)
-    b_vertex := uint32(gl.GetAttribLocation(prog, gl.Str("b_vertex\x00")))
+    b_vertex := uint32(gl.GetAttribLocation(mesh.program_id, gl.Str("b_vertex\x00")))
     gl.EnableVertexAttribArray(b_vertex)
     gl.VertexAttribPointer(b_vertex, 3, gl.FLOAT, false, 0, nil)
 
     gl.GenBuffers(1, &mesh.uv_id)
     gl.BindBuffer(gl.ARRAY_BUFFER, mesh.uv_id)
     gl.BufferData(gl.ARRAY_BUFFER, int(4 * (mesh.nr_vertices * 2)), gl.Ptr(uvs), gl.STATIC_DRAW)
-    b_uv := uint32(gl.GetAttribLocation(prog, gl.Str("b_uv\x00")))
+    b_uv := uint32(gl.GetAttribLocation(mesh.program_id, gl.Str("b_uv\x00")))
     gl.EnableVertexAttribArray(b_uv)
     gl.VertexAttribPointer(b_uv, 2, gl.FLOAT, false, 0, nil)
 
@@ -180,14 +173,16 @@ func makeMesh(prog uint32, width int, height int) Mesh {
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-    u_tex := int32(gl.GetUniformLocation(prog, gl.Str("u_tex\x00")))
+    u_tex := int32(gl.GetUniformLocation(mesh.program_id, gl.Str("u_tex\x00")))
     gl.Uniform1i(u_tex, 0)
 
+    return mesh
+}
+
+func initGL() {
     gl.Enable(gl.DEPTH_TEST)
     gl.DepthFunc(gl.LESS)
     gl.ClearColor(1.0, 1.0, 1.0, 1.0)
-
-    return mesh
 }
 
 func basicShader() uint32 {
