@@ -12,6 +12,11 @@ import (
     "github.com/fogleman/gg"
     "image"
     "image/draw"
+    "io/ioutil"
+    "github.com/Succo/wkttoorb"
+    "github.com/paulmach/orb"
+
+//    "reflect"
 )
 
 type Mesh struct {
@@ -26,12 +31,26 @@ type Mesh struct {
 func main() {
     runtime.LockOSThread()
 
+    var wktFile string
     var width int
     var height int
 
+    flag.StringVar(&wktFile, "wkt", "", "WKT file to view")
     flag.IntVar(&width, "width", 640, "Window width")
     flag.IntVar(&height, "height", 480, "Window height")
     flag.Parse()
+
+    wktBytes, ferr := ioutil.ReadFile(wktFile)
+    if ferr != nil {
+        panic(ferr)
+    }
+
+    poly, werr := wkttoorb.Scan(string(wktBytes))
+    if werr != nil {
+        panic(werr)
+    }
+    //fmt.Println(reflect.TypeOf(geo))
+    //fmt.Println(geo)
 
     if err := glfw.Init(); err != nil {
         panic(err)
@@ -81,18 +100,18 @@ func main() {
     window.SetScrollCallback(func(w *glfw.Window, xoff float64, yoff float64) {
         if yoff > 0 {
             scale += 0.1
-            draw2D(width, height, scale)
+            draw2D(poly.(orb.Polygon), width, height, scale)
         }
         if yoff < 0 {
             scale -= 0.1
-            draw2D(width, height, scale)
+            draw2D(poly.(orb.Polygon), width, height, scale)
         }
     })
 
     m_mvp_id := gl.GetUniformLocation(mesh.program_id, gl.Str("m_mvp\x00"))
     m_mv_id := gl.GetUniformLocation(mesh.program_id, gl.Str("m_mv\x00"))
 
-    draw2D(width, height, scale)
+    draw2D(poly.(orb.Polygon), width, height, scale)
     for (!window.ShouldClose()) {
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         gl.UniformMatrix4fv(m_mvp_id, 1, false, &mvp[0])
@@ -103,23 +122,16 @@ func main() {
     }
 }
 
-func draw2D(width int, height int, scale float64) {
-    polygon := [6][2]int{
-        {0,0},
-        {250,0},
-        {250,18},
-        {146,28},
-        {146,50},
-        {0,50},
-    }
+func draw2D(poly orb.Polygon, width int, height int, scale float64) {
     dc := gg.NewContext(width, height)
     dc.ScaleAbout(scale, scale, 0, 0)
     dc.SetRGB(1.0, 0, 0)
-    dc.MoveTo(float64(polygon[0][0]), float64(polygon[0][1]))
-    for i := 1; i < 6; i++ {
-        dc.LineTo(float64(polygon[i][0]), float64(polygon[i][1]))
+    for i := 0; i < len(poly); i++ {
+        dc.MoveTo(poly[i][0][0], poly[i][0][1])
+        for j := 1; j < len(poly[i]); j++ {
+            dc.LineTo(poly[i][j][0], poly[i][j][1])
+        }
     }
-    dc.LineTo(float64(polygon[0][0]), float64(polygon[0][1]))
     dc.Stroke()
     dcimg := dc.Image()
     bounds := dcimg.Bounds()
