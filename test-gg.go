@@ -8,15 +8,12 @@ import (
     "runtime"
     "github.com/go-gl/glfw/v3.2/glfw"
     "github.com/go-gl/gl/v2.1/gl"
-//    "github.com/go-gl/mathgl/mgl32"
     "github.com/fogleman/gg"
     "image"
     "image/draw"
-    "io/ioutil"
+    "bufio"
     "github.com/Succo/wkttoorb"
     "github.com/paulmach/orb"
-
-//    "reflect"
 )
 
 type Mesh struct {
@@ -31,26 +28,25 @@ type Mesh struct {
 func main() {
     runtime.LockOSThread()
 
-    var wktFile string
     var width int
     var height int
 
-    flag.StringVar(&wktFile, "wkt", "", "WKT file to view")
+    var things []interface{}
+    scanner := bufio.NewScanner(os.Stdin)
+    for scanner.Scan() {
+        geo, err := wkttoorb.Scan(scanner.Text())
+        if err != nil {
+            panic(err)
+        }
+        things = append(things, geo)
+    }
+    if err := scanner.Err(); err != nil {
+        fmt.Fprintln(os.Stderr, "reading standard input:", err)
+    }
+
     flag.IntVar(&width, "width", 640, "Window width")
     flag.IntVar(&height, "height", 480, "Window height")
     flag.Parse()
-
-    wktBytes, ferr := ioutil.ReadFile(wktFile)
-    if ferr != nil {
-        panic(ferr)
-    }
-
-    poly, werr := wkttoorb.Scan(string(wktBytes))
-    if werr != nil {
-        panic(werr)
-    }
-    //fmt.Println(reflect.TypeOf(geo))
-    //fmt.Println(geo)
 
     if err := glfw.Init(); err != nil {
         panic(err)
@@ -87,15 +83,15 @@ func main() {
     window.SetScrollCallback(func(w *glfw.Window, xoff float64, yoff float64) {
         if yoff > 0 {
             scale += 0.1
-            draw2D(poly.(orb.Polygon), width, height, scale)
+            drawThings(things, width, height, scale)
         }
         if yoff < 0 {
             scale -= 0.1
-            draw2D(poly.(orb.Polygon), width, height, scale)
+            drawThings(things, width, height, scale)
         }
     })
 
-    draw2D(poly.(orb.Polygon), width, height, scale)
+    drawThings(things, width, height, scale)
     for (!window.ShouldClose()) {
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         gl.DrawArrays(gl.TRIANGLES, 0, int32(mesh.nr_vertices))
@@ -104,10 +100,36 @@ func main() {
     }
 }
 
-func draw2D(poly orb.Polygon, width int, height int, scale float64) {
+func drawThings(things []interface{}, width int, height int, scale float64) {
     dc := gg.NewContext(width, height)
     dc.ScaleAbout(scale, scale, 0, 0)
     dc.SetRGB(1.0, 0, 0)
+    for i := 0; i < len(things); i++ {
+        switch t := things[i].(type) {
+            case orb.Polygon:
+                drawPolygon(dc, t)
+            case orb.LineString:
+                drawLineString(dc, t)
+            default:
+                fmt.Printf("skipping object of unknown type %T\n", t)
+        }
+    }
+    dcimg := dc.Image()
+    bounds := dcimg.Bounds()
+    img := image.NewNRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
+    draw.Draw(img, img.Bounds(), dcimg, bounds.Min, draw.Src)
+    rebuildTexture(img)
+}
+
+func drawLineString(dc *gg.Context, ls orb.LineString) {
+    dc.MoveTo(ls[0][0], ls[0][1])
+    for i := 1; i < len(ls); i++ {
+        dc.LineTo(ls[i][0], ls[i][1])
+    }
+    dc.Stroke()
+}
+
+func drawPolygon(dc *gg.Context, poly orb.Polygon) {
     for i := 0; i < len(poly); i++ {
         dc.MoveTo(poly[i][0][0], poly[i][0][1])
         for j := 1; j < len(poly[i]); j++ {
@@ -115,11 +137,6 @@ func draw2D(poly orb.Polygon, width int, height int, scale float64) {
         }
     }
     dc.Stroke()
-    dcimg := dc.Image()
-    bounds := dcimg.Bounds()
-    img := image.NewNRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
-    draw.Draw(img, img.Bounds(), dcimg, bounds.Min, draw.Src)
-    rebuildTexture(img)
 }
 
 func rebuildTexture(img *image.NRGBA) {
