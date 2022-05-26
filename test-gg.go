@@ -8,7 +8,7 @@ import (
     "runtime"
     "github.com/go-gl/glfw/v3.2/glfw"
     "github.com/go-gl/gl/v2.1/gl"
-    "github.com/go-gl/mathgl/mgl32"
+//    "github.com/go-gl/mathgl/mgl32"
     "github.com/fogleman/gg"
     "image"
     "image/draw"
@@ -74,19 +74,6 @@ func main() {
     initGL()
     mesh := generateBuffers(width, height)
 
-    projection := mgl32.Perspective(mgl32.DegToRad(45.0), float32(width)/float32(height), 0.1, 100.0)
-    view := mgl32.Ident4()
-    model := mgl32.Ident4()
-
-    var mv mgl32.Mat4
-    var mvp mgl32.Mat4
-
-    var Z float32 = -2
-    model = mgl32.Translate3D(0.0, 0.0, 0.0)
-    view = mgl32.Translate3D(0.0, 0.0, Z)
-    mv = view.Mul4(model)
-    mvp = projection.Mul4(mv)
-
 //    window.SetCursorPosCallback(func(w *glfw.Window, xpos float64, ypos float64) {
 //        xangle := (float32(xpos) / float32(width)) * 6.2831
 //        yangle := (float32(ypos) / float32(height)) * 6.2831
@@ -108,14 +95,9 @@ func main() {
         }
     })
 
-    m_mvp_id := gl.GetUniformLocation(mesh.program_id, gl.Str("m_mvp\x00"))
-    m_mv_id := gl.GetUniformLocation(mesh.program_id, gl.Str("m_mv\x00"))
-
     draw2D(poly.(orb.Polygon), width, height, scale)
     for (!window.ShouldClose()) {
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-        gl.UniformMatrix4fv(m_mvp_id, 1, false, &mvp[0])
-        gl.UniformMatrix4fv(m_mv_id, 1, false, &mv[0])
         gl.DrawArrays(gl.TRIANGLES, 0, int32(mesh.nr_vertices))
         glfw.PollEvents()
         window.SwapBuffers()
@@ -156,14 +138,13 @@ func rebuildTexture(img *image.NRGBA) {
 func generateBuffers(width int, height int) Mesh {
     var mesh Mesh
     mesh.nr_vertices = 6
-    aspect := float32(height) / float32(width)
     var vertexes = []float32{
-        -1.0, -aspect, 0.0,
-        1.0, -aspect, 0.0,
-        -1.0, aspect, 0.0,
-        1.0, -aspect, 0.0,
-        -1.0, aspect, 0.0,
-        1.0, aspect, 0.0,
+        -1.0, -1.0, 0.0,
+        1.0, -1.0, 0.0,
+        -1.0, 1.0, 0.0,
+        1.0, -1.0, 0.0,
+        -1.0, 1.0, 0.0,
+        1.0, 1.0, 0.0,
     }
     var uvs = []float32{
         0.0, 0.0,
@@ -215,14 +196,13 @@ func basicShader() uint32 {
     vertexShaderSource := `
     #version 120
 
-    uniform mat4 m_mvp;
     attribute vec3 b_vertex;
     attribute vec2 b_uv;
     varying vec2 v_uv;
 
     void main() {
         v_uv = b_uv;
-        gl_Position = m_mvp * vec4(b_vertex, 1.0);
+        gl_Position = vec4(b_vertex, 1.0);
     }
 ` + "\x00"
 
