@@ -1,4 +1,4 @@
-TOOLS := cnc-cutting-path cnc-stl-view cnc-view-paths
+TOOLS := cnc-path-cutting cnc-stl-view cnc-path-view
 
 all: $(TOOLS)
 

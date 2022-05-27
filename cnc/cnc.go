@@ -1,56 +1,21 @@
-package main
+package cnc
 
 import (
-    "os"
     "math"
-    "fmt"
-    "bufio"
-    "github.com/Succo/wkttoorb"
     "github.com/paulmach/orb"
-    "github.com/paulmach/orb/encoding/wkt"
 )
 
 //type MultiPointLine struct {
-//    sx int32
-//    sy int32
+//    sx float64
+//    sy float64
+//    ex float64
+//    ey float64
 //}
 
-func main() {
-    var things []interface{}
-    scanner := bufio.NewScanner(os.Stdin)
-    for scanner.Scan() {
-        geo, err := wkttoorb.Scan(scanner.Text())
-        if err != nil {
-            panic(err)
-        }
-        things = append(things, geo)
-    }
-    if err := scanner.Err(); err != nil {
-        fmt.Fprintln(os.Stderr, "reading standard input:", err)
-    }
-
-    for i := 0; i < len(things); i++ {
-        switch t := things[i].(type) {
-            case orb.Polygon:
-                doPolygon(t)
-            case orb.LineString:
-                doLineString(t)
-            default:
-                fmt.Printf("skipping object of unknown type %T\n", t)
-        }
-    }
-}
-
-func doPolygon(poly orb.Polygon) {
-    for i := 0; i < len(poly); i++ {
-        doLineString(orb.LineString(poly[i]))
-    }
-}
-
-func doLineString(ls orb.LineString) {
+func LineStringCuttingPath(ls orb.LineString) orb.LineString {
+    fin := make(orb.LineString, 0, len(ls))
     if len(ls) < 2 {
-        fmt.Println("this linestring does not have enough points")
-        return
+        return fin
     }
     tpn := make([][2][2]float64, 0, len(ls) - 1)
     for i := 1; i < len(ls); i++ {
@@ -71,7 +36,6 @@ func doLineString(ls orb.LineString) {
     }
     var fx float64 = tpn[0][1][0]
     var fy float64 = tpn[0][1][1]
-    fin := make(orb.LineString, 0, len(tpn) + 1)
     fin = append(fin, orb.Point{tpn[0][0][0],tpn[0][0][1]})
     for i := 1; i < len(tpn); i++ {
         sxa := tpn[i-1][0][0]
@@ -111,7 +75,15 @@ func doLineString(ls orb.LineString) {
         fy = eyb
     }
     fin = append(fin, orb.Point{fx, fy})
-    fmt.Println(wkt.MarshalString(fin))
+    return fin
+}
+
+func LineStringTranslate(ls orb.LineString, dx, dy float64) orb.LineString {
+    fin := make(orb.LineString, 0, len(ls))
+    for i := 0; i < len(ls); i++ {
+        fin = append(fin, orb.Point{ls[i][0] + dx, ls[i][1] + dy})
+    }
+    return fin
 }
 
 func zify(value float64) float64 {
