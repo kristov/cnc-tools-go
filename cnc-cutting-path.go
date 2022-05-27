@@ -2,7 +2,6 @@ package main
 
 import (
     "os"
-//    "flag"
     "math"
     "fmt"
     "bufio"
@@ -10,6 +9,11 @@ import (
     "github.com/paulmach/orb"
     "github.com/paulmach/orb/encoding/wkt"
 )
+
+//type MultiPointLine struct {
+//    sx int32
+//    sy int32
+//}
 
 func main() {
     var things []interface{}
@@ -63,10 +67,10 @@ func doLineString(ls orb.LineString) {
         nangle := angle - (math.Pi / 2)
         nx := math.Cos(nangle) * 2
         ny := math.Sin(nangle) * 2
-        tpn = append(tpn, [2][2]float64{{sx+nx,sy+ny},{ex+nx,ey+ny}})
+        tpn = append(tpn, [2][2]float64{{zify(sx+nx),zify(sy+ny)},{zify(ex+nx),zify(ey+ny)}})
     }
-    var fx float64 = 0.0
-    var fy float64 = 0.0
+    var fx float64 = tpn[0][1][0]
+    var fy float64 = tpn[0][1][1]
     fin := make(orb.LineString, 0, len(tpn) + 1)
     fin = append(fin, orb.Point{tpn[0][0][0],tpn[0][0][1]})
     for i := 1; i < len(tpn); i++ {
@@ -78,16 +82,41 @@ func doLineString(ls orb.LineString) {
         syb := tpn[i][0][1]
         exb := tpn[i][1][0]
         eyb := tpn[i][1][1]
+        if sxa == exa {
+            slb := (eyb - syb) / (exb - sxb)
+            yib := syb - slb * sxb
+            y := slb * exa + yib
+            fin = append(fin, orb.Point{exa, y})
+            fx = exb
+            fy = eyb
+            continue
+        }
+        if sxb == exb {
+            sla := (eya - sya) / (exa - sxa)
+            yia := sya - sla * sxa
+            y := sla * sxb + yia
+            fin = append(fin, orb.Point{sxb, y})
+            fx = exb
+            fy = eyb
+            continue
+        }
         sla := (eya - sya) / (exa - sxa)
         yia := sya - sla * sxa
         slb := (eyb - syb) / (exb - sxb)
         yib := syb - slb * sxb
         x := (yib - yia) / (sla - slb)
         y := sla * x + yia
-        fin = append(fin, orb.Point{x,y})
-        fx = tpn[i][1][0]
-        fy = tpn[i][1][1]
+        fin = append(fin, orb.Point{x, y})
+        fx = exb
+        fy = eyb
     }
-    fin = append(fin, orb.Point{fx,fy})
+    fin = append(fin, orb.Point{fx, fy})
     fmt.Println(wkt.MarshalString(fin))
+}
+
+func zify(value float64) float64 {
+    if value < 0.000001 && value > -0.000001 {
+        return 0.0
+    }
+    return value
 }
