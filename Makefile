@@ -1,4 +1,4 @@
-TOOLS := cnc-path-cutting cnc-stl-view cnc-path-view
+TOOLS := cnc-path-cutting cnc-stl-view cnc-path-view cnc-path-translate
 
 all: $(TOOLS)
 
