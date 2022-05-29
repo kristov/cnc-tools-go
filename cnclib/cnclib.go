@@ -37,7 +37,7 @@ func LineStringCuttingPath(ls orb.LineString) orb.LineString {
     }
     var fx float64 = tpn[0].ex
     var fy float64 = tpn[0].ey
-    fin = append(fin, orb.Point{tpn[0].sx,tpn[0].sy})
+    fin = append(fin, orb.Point{zify(tpn[0].sx), zify(tpn[0].sy)})
     for i := 1; i < len(tpn); i++ {
         sxa := tpn[i-1].sx
         sya := tpn[i-1].sy
@@ -51,7 +51,7 @@ func LineStringCuttingPath(ls orb.LineString) orb.LineString {
             slb := (eyb - syb) / (exb - sxb)
             yib := syb - slb * sxb
             y := slb * exa + yib
-            fin = append(fin, orb.Point{exa, y})
+            fin = append(fin, orb.Point{zify(exa), zify(y)})
             fx = exb
             fy = eyb
             continue
@@ -60,7 +60,7 @@ func LineStringCuttingPath(ls orb.LineString) orb.LineString {
             sla := (eya - sya) / (exa - sxa)
             yia := sya - sla * sxa
             y := sla * sxb + yia
-            fin = append(fin, orb.Point{sxb, y})
+            fin = append(fin, orb.Point{zify(sxb), zify(y)})
             fx = exb
             fy = eyb
             continue
@@ -71,18 +71,18 @@ func LineStringCuttingPath(ls orb.LineString) orb.LineString {
         yib := syb - slb * sxb
         x := (yib - yia) / (sla - slb)
         y := sla * x + yia
-        fin = append(fin, orb.Point{x, y})
+        fin = append(fin, orb.Point{zify(x), zify(y)})
         fx = exb
         fy = eyb
     }
-    fin = append(fin, orb.Point{fx, fy})
+    fin = append(fin, orb.Point{zify(fx), zify(fy)})
     return fin
 }
 
 func LineStringTranslate(ls orb.LineString, dx, dy float64) orb.LineString {
     fin := make(orb.LineString, 0, len(ls))
     for i := 0; i < len(ls); i++ {
-        fin = append(fin, orb.Point{ls[i][0] + dx, ls[i][1] + dy})
+        fin = append(fin, orb.Point{zify(ls[i][0] + dx), zify(ls[i][1] + dy)})
     }
     return fin
 }
@@ -92,7 +92,7 @@ func LineStringRotate(ls orb.LineString, radians float64) orb.LineString {
     mat := mgl32.Rotate2D(float32(radians))
     for i := 0; i < len(ls); i++ {
         p := mat.Mul2x1(mgl32.Vec2{float32(ls[i][0]), float32(ls[i][1])})
-        fin = append(fin, orb.Point{float64(p[0]), float64(p[1])})
+        fin = append(fin, orb.Point{zify(float64(p[0])), zify(float64(p[1]))})
     }
     return fin
 }
@@ -101,5 +101,5 @@ func zify(value float64) float64 {
     if value < 0.000001 && value > -0.000001 {
         return 0.0
     }
-    return value
+    return math.Round(value * 100) / 100
 }
