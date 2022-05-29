@@ -19,11 +19,13 @@ func LineStringCuttingPath(ls orb.LineString) orb.LineString {
         return fin
     }
     tpn := make([]TwoPointLine, 0, len(ls) - 1)
+    var ep orb.Point = ls[0]
     for i := 1; i < len(ls); i++ {
         sx := ls[i-1][0]
         sy := ls[i-1][1]
         ex := ls[i][0]
         ey := ls[i][1]
+        ep = ls[i]
         dx := ex - sx
         dy := ey - sy
         angle := math.Atan(dy / dx)
@@ -35,48 +37,52 @@ func LineStringCuttingPath(ls orb.LineString) orb.LineString {
         ny := math.Sin(nangle) * 2
         tpn = append(tpn, TwoPointLine{zify(sx+nx),zify(sy+ny),zify(ex+nx),zify(ey+ny)})
     }
-    var fx float64 = tpn[0].ex
-    var fy float64 = tpn[0].ey
+    var end TwoPointLine = tpn[0]
     fin = append(fin, orb.Point{zify(tpn[0].sx), zify(tpn[0].sy)})
     for i := 1; i < len(tpn); i++ {
-        sxa := tpn[i-1].sx
-        sya := tpn[i-1].sy
-        exa := tpn[i-1].ex
-        eya := tpn[i-1].ey
-        sxb := tpn[i].sx
-        syb := tpn[i].sy
-        exb := tpn[i].ex
-        eyb := tpn[i].ey
-        if sxa == exa {
-            slb := (eyb - syb) / (exb - sxb)
-            yib := syb - slb * sxb
-            y := slb * exa + yib
-            fin = append(fin, orb.Point{zify(exa), zify(y)})
-            fx = exb
-            fy = eyb
-            continue
-        }
-        if sxb == exb {
-            sla := (eya - sya) / (exa - sxa)
-            yia := sya - sla * sxa
-            y := sla * sxb + yia
-            fin = append(fin, orb.Point{zify(sxb), zify(y)})
-            fx = exb
-            fy = eyb
-            continue
-        }
-        sla := (eya - sya) / (exa - sxa)
-        yia := sya - sla * sxa
+        end = tpn[i]
+        p := line_intersect_point(tpn[i-1], tpn[i])
+        fin = append(fin, p)
+    }
+    if (ls[0][0] == ep[0]) && (ls[0][1] == ep[1]) {
+        p := line_intersect_point(end, tpn[0])
+        fin = append(fin, p)
+        fin[0][0] = p[0]
+        fin[0][1] = p[1]
+    } else {
+        fin = append(fin, orb.Point{zify(end.ex), zify(end.ey)})
+    }
+    return fin
+}
+
+func line_intersect_point(a TwoPointLine, b TwoPointLine) orb.Point {
+    sxa := a.sx
+    sya := a.sy
+    exa := a.ex
+    eya := a.ey
+    sxb := b.sx
+    syb := b.sy
+    exb := b.ex
+    eyb := b.ey
+    if sxa == exa {
         slb := (eyb - syb) / (exb - sxb)
         yib := syb - slb * sxb
-        x := (yib - yia) / (sla - slb)
-        y := sla * x + yia
-        fin = append(fin, orb.Point{zify(x), zify(y)})
-        fx = exb
-        fy = eyb
+        y := slb * exa + yib
+        return orb.Point{zify(exa), zify(y)}
     }
-    fin = append(fin, orb.Point{zify(fx), zify(fy)})
-    return fin
+    if sxb == exb {
+        sla := (eya - sya) / (exa - sxa)
+        yia := sya - sla * sxa
+        y := sla * sxb + yia
+        return orb.Point{zify(sxb), zify(y)}
+    }
+    sla := (eya - sya) / (exa - sxa)
+    yia := sya - sla * sxa
+    slb := (eyb - syb) / (exb - sxb)
+    yib := syb - slb * sxb
+    x := (yib - yia) / (sla - slb)
+    y := sla * x + yia
+    return orb.Point{zify(x), zify(y)}
 }
 
 func LineStringTranslate(ls orb.LineString, dx, dy float64) orb.LineString {
