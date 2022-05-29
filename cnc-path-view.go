@@ -103,7 +103,13 @@ func main() {
 func drawThings(things []interface{}, width int, height int, scale float64) {
     dc := gg.NewContext(width, height)
     dc.ScaleAbout(scale, scale, 0, 0)
-    dc.SetRGB(1.0, 0, 0)
+    var colors = [][]float64{
+        {1.0, 0.0, 0.0},
+        {0.0, 1.0, 0.0},
+        {0.0, 0.0, 1.0},
+    }
+    var c uint32 = 0
+    dc.SetRGB(colors[c][0], colors[c][1], colors[c][2])
     for i := 0; i < len(things); i++ {
         switch t := things[i].(type) {
             case orb.Polygon:
@@ -113,6 +119,11 @@ func drawThings(things []interface{}, width int, height int, scale float64) {
             default:
                 fmt.Printf("skipping object of unknown type %T\n", t)
         }
+        c++
+        if c > 2 {
+            c = 0
+        }
+        dc.SetRGB(colors[c][0], colors[c][1], colors[c][2])
     }
     dcimg := dc.Image()
     bounds := dcimg.Bounds()
