@@ -6,7 +6,7 @@ import (
     "bufio"
     "flag"
     "github.com/Succo/wkttoorb"
-    "cnc-tools-go/cnc"
+    "cnc-tools-go/cnclib"
     "github.com/paulmach/orb"
     "github.com/paulmach/orb/encoding/wkt"
 )
@@ -29,10 +29,12 @@ func main() {
     var dx float64 = 0.0
     var dy float64 = 0.0
     var radius float64 = 0.0
+    var angle float64 = 0.0
     flag.StringVar(&cmd, "cmd", "help", "The command")
     flag.Float64Var(&dx, "dx", 0.0, "Delta X")
     flag.Float64Var(&dy, "dy", 0.0, "Delta Y")
     flag.Float64Var(&radius, "radius", 0.0, "Radius of cutting tool")
+    flag.Float64Var(&angle, "angle", 0.0, "Angle of rotation")
     flag.Parse()
 
     switch {
@@ -40,6 +42,8 @@ func main() {
             doTranslate(things, dx, dy)
         case cmd == "toolpath":
             doToolpath(things, radius)
+        case cmd == "rotate":
+            doRotate(things, angle)
         default:
             printHelp()
     }
@@ -53,11 +57,17 @@ func printHelp() {
     fmt.Println("    trans - cnc trans --dx 10.0 --dy 5.2")
 }
 
-func doTranslate(things []orb.Geometry, dx, dy float64) {
-    fmt.Printf("dx: %0.2f, dy: %0.2f\n", dx, dy)
+func doRotate(things []orb.Geometry, angle float64) {
     lss := getLineStrings(things)
     for i := 0; i < len(lss); i++ {
-        fin := cnc.LineStringTranslate(lss[i], dx, dy)
+        fin := cnclib.LineStringRotate(lss[i], angle / 57.29578)
+        fmt.Println(wkt.MarshalString(fin))
+    }
+}
+func doTranslate(things []orb.Geometry, dx, dy float64) {
+    lss := getLineStrings(things)
+    for i := 0; i < len(lss); i++ {
+        fin := cnclib.LineStringTranslate(lss[i], dx, dy)
         fmt.Println(wkt.MarshalString(fin))
     }
 }
@@ -65,7 +75,7 @@ func doTranslate(things []orb.Geometry, dx, dy float64) {
 func doToolpath(things []orb.Geometry, radius float64) {
     lss := getLineStrings(things)
     for i := 0; i < len(lss); i++ {
-        fin := cnc.LineStringCuttingPath(lss[i])
+        fin := cnclib.LineStringCuttingPath(lss[i])
         fmt.Println(wkt.MarshalString(fin))
     }
 }

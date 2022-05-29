@@ -1,8 +1,9 @@
-package cnc
+package cnclib
 
 import (
     "math"
     "github.com/paulmach/orb"
+    "github.com/go-gl/mathgl/mgl32"
 )
 
 type TwoPointLine struct {
@@ -82,6 +83,16 @@ func LineStringTranslate(ls orb.LineString, dx, dy float64) orb.LineString {
     fin := make(orb.LineString, 0, len(ls))
     for i := 0; i < len(ls); i++ {
         fin = append(fin, orb.Point{ls[i][0] + dx, ls[i][1] + dy})
+    }
+    return fin
+}
+
+func LineStringRotate(ls orb.LineString, radians float64) orb.LineString {
+    fin := make(orb.LineString, 0, len(ls))
+    mat := mgl32.Rotate2D(float32(radians))
+    for i := 0; i < len(ls); i++ {
+        p := mat.Mul2x1(mgl32.Vec2{float32(ls[i][0]), float32(ls[i][1])})
+        fin = append(fin, orb.Point{float64(p[0]), float64(p[1])})
     }
     return fin
 }
