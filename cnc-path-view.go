@@ -30,6 +30,7 @@ func main() {
 
     var width int
     var height int
+    var scale float64 = 1.0
 
     var things []interface{}
     scanner := bufio.NewScanner(os.Stdin)
@@ -68,18 +69,17 @@ func main() {
     fmt.Fprintln(os.Stderr, "OpenGL version", version)
 
     initGL()
+    gl.Viewport(0, 0, int32(width), int32(height))
     mesh := generateBuffers(width, height)
+    drawThings(things, width, height, scale)
 
-//    window.SetCursorPosCallback(func(w *glfw.Window, xpos float64, ypos float64) {
-//        xangle := (float32(xpos) / float32(width)) * 6.2831
-//        yangle := (float32(ypos) / float32(height)) * 6.2831
-//        model = mgl32.Translate3D(-5, -5, -5)
-//        model = mgl32.HomogRotate3DY(-xangle).Mul4(model)
-//        model = mgl32.HomogRotate3DX(yangle).Mul4(model)
-//        mv = view.Mul4(model)
-//        mvp = projection.Mul4(mv)
-//    })
-    var scale float64 = 1.0
+    window.SetSizeCallback(func(w *glfw.Window, nw int, nh int) {
+        width = nw
+        height = nh
+        gl.Viewport(0, 0, int32(width), int32(height))
+        drawThings(things, width, height, scale)
+    })
+
     window.SetScrollCallback(func(w *glfw.Window, xoff float64, yoff float64) {
         if yoff > 0 {
             scale += 0.1
@@ -91,7 +91,6 @@ func main() {
         }
     })
 
-    drawThings(things, width, height, scale)
     for (!window.ShouldClose()) {
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
         gl.DrawArrays(gl.TRIANGLES, 0, int32(mesh.nr_vertices))
@@ -129,7 +128,7 @@ func drawThings(things []interface{}, width int, height int, scale float64) {
     bounds := dcimg.Bounds()
     img := image.NewNRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
     draw.Draw(img, img.Bounds(), dcimg, bounds.Min, draw.Src)
-    rebuildTexture(img)
+    buildTexture(img)
 }
 
 func drawLineString(dc *gg.Context, ls orb.LineString) {
@@ -150,7 +149,7 @@ func drawPolygon(dc *gg.Context, poly orb.Polygon) {
     dc.Stroke()
 }
 
-func rebuildTexture(img *image.NRGBA) {
+func buildTexture(img *image.NRGBA) {
     gl.TexImage2D(
         gl.TEXTURE_2D,
         0,
