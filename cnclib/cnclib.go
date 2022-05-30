@@ -125,3 +125,18 @@ func zify(value float64) float64 {
     }
     return math.Round(value * 100) / 100
 }
+
+func GeometryToLineStrings(geos []orb.Geometry) []orb.LineString {
+    var linestrings []orb.LineString
+    for i := 0; i < len(geos); i++ {
+        switch t := geos[i].(type) {
+            case orb.LineString:
+                linestrings = append(linestrings, orb.LineString(t))
+            case orb.Polygon:
+                for j := 0; j < len(t); j++ {
+                    linestrings = append(linestrings, orb.LineString(t[j]))
+                }
+        }
+    }
+    return linestrings
+}

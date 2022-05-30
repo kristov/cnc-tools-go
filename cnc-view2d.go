@@ -12,6 +12,7 @@ import (
     "image"
     "image/draw"
     "bufio"
+    "cnc-tools-go/cnclib"
     "github.com/Succo/wkttoorb"
     "github.com/paulmach/orb"
 )
@@ -32,7 +33,7 @@ func main() {
     var height int
     var scale float64 = 1.0
 
-    var things []interface{}
+    var things []orb.Geometry
     scanner := bufio.NewScanner(os.Stdin)
     for scanner.Scan() {
         geo, err := wkttoorb.Scan(scanner.Text())
@@ -44,6 +45,7 @@ func main() {
     if err := scanner.Err(); err != nil {
         fmt.Fprintln(os.Stderr, "reading standard input:", err)
     }
+    lss := cnclib.GeometryToLineStrings(things)
 
     flag.IntVar(&width, "width", 640, "Window width")
     flag.IntVar(&height, "height", 480, "Window height")
@@ -71,23 +73,23 @@ func main() {
     initGL()
     gl.Viewport(0, 0, int32(width), int32(height))
     mesh := generateBuffers(width, height)
-    drawThings(things, width, height, scale)
+    drawLineStrings(lss, width, height, scale)
 
     window.SetSizeCallback(func(w *glfw.Window, nw int, nh int) {
         width = nw
         height = nh
         gl.Viewport(0, 0, int32(width), int32(height))
-        drawThings(things, width, height, scale)
+        drawLineStrings(lss, width, height, scale)
     })
 
     window.SetScrollCallback(func(w *glfw.Window, xoff float64, yoff float64) {
         if yoff > 0 {
             scale += 0.1
-            drawThings(things, width, height, scale)
+            drawLineStrings(lss, width, height, scale)
         }
         if yoff < 0 {
             scale -= 0.1
-            drawThings(things, width, height, scale)
+            drawLineStrings(lss, width, height, scale)
         }
     })
 
@@ -99,7 +101,7 @@ func main() {
     }
 }
 
-func drawThings(things []interface{}, width int, height int, scale float64) {
+func drawLineStrings(lss []orb.LineString, width int, height int, scale float64) {
     dc := gg.NewContext(width, height)
     dc.ScaleAbout(scale, scale, 0, 0)
     var colors = [][]float64{
@@ -109,15 +111,12 @@ func drawThings(things []interface{}, width int, height int, scale float64) {
     }
     var c uint32 = 0
     dc.SetRGB(colors[c][0], colors[c][1], colors[c][2])
-    for i := 0; i < len(things); i++ {
-        switch t := things[i].(type) {
-            case orb.Polygon:
-                drawPolygon(dc, t)
-            case orb.LineString:
-                drawLineString(dc, t)
-            default:
-                fmt.Printf("skipping object of unknown type %T\n", t)
+    for i := 0; i < len(lss); i++ {
+        dc.MoveTo(lss[i][0][0], lss[i][0][1])
+        for j := 1; j < len(lss[i]); j++ {
+            dc.LineTo(lss[i][j][0], lss[i][j][1])
         }
+        dc.Stroke()
         c++
         if c > 2 {
             c = 0
@@ -129,24 +128,6 @@ func drawThings(things []interface{}, width int, height int, scale float64) {
     img := image.NewNRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
     draw.Draw(img, img.Bounds(), dcimg, bounds.Min, draw.Src)
     buildTexture(img)
-}
-
-func drawLineString(dc *gg.Context, ls orb.LineString) {
-    dc.MoveTo(ls[0][0], ls[0][1])
-    for i := 1; i < len(ls); i++ {
-        dc.LineTo(ls[i][0], ls[i][1])
-    }
-    dc.Stroke()
-}
-
-func drawPolygon(dc *gg.Context, poly orb.Polygon) {
-    for i := 0; i < len(poly); i++ {
-        dc.MoveTo(poly[i][0][0], poly[i][0][1])
-        for j := 1; j < len(poly[i]); j++ {
-            dc.LineTo(poly[i][j][0], poly[i][j][1])
-        }
-    }
-    dc.Stroke()
 }
 
 func buildTexture(img *image.NRGBA) {

@@ -5,11 +5,33 @@ import (
     "fmt"
     "bufio"
     "flag"
-    "github.com/Succo/wkttoorb"
     "cnc-tools-go/cnclib"
+    "github.com/Succo/wkttoorb"
     "github.com/paulmach/orb"
     "github.com/paulmach/orb/encoding/wkt"
 )
+
+/*
+    addcmd := flag.NewFlagSet("add", flag.ExitOnError)
+    a_add := addcmd.Int("a", 0, "The value of a")
+    b_add := addcmd.Int("b", 0, "The value of b")
+
+    mulcmd := flag.NewFlagSet("mul", flag.ExitOnError)
+    a_mul := mulcmd.Int("a", 0, "The value of a")
+    b_mul := mulcmd.Int("b", 0, "The value of b")
+
+    switch os.Args[1] {
+    case "add":
+        addcmd.Parse(os.Args[2:])
+        fmt.Println(*a_add + *b_add)
+    case "mul":
+        mulcmd.Parse(os.Args[2:])
+        fmt.Println(*(a_mul) * (*b_mul))
+    default:
+        fmt.Println("expected add or mul command")
+        os.Exit(1)
+    }
+*/
 
 func main() {
     var things []orb.Geometry
@@ -37,7 +59,7 @@ func main() {
     flag.Float64Var(&angle, "angle", 0.0, "Angle of rotation in degrees")
     flag.Parse()
 
-    lss := getLineStrings(things)
+    lss := cnclib.GeometryToLineStrings(things)
     switch {
         case cmd == "trans":
             for i := 0; i < len(lss); i++ {
@@ -77,21 +99,4 @@ func printHelp() {
     fmt.Println("    cnc --cmd=mirrory")
     fmt.Println("    cnc --cmd=mirrorx")
     fmt.Println("    cnc --cmd=toolpath")
-}
-
-func getLineStrings(things []orb.Geometry) []orb.LineString {
-    var linestrings []orb.LineString
-    for i := 0; i < len(things); i++ {
-        switch t := things[i].(type) {
-            case orb.LineString:
-                linestrings = append(linestrings, orb.LineString(t))
-            case orb.Polygon:
-                for j := 0; j < len(t); j++ {
-                    linestrings = append(linestrings, orb.LineString(t[j]))
-                }
-            default:
-                fmt.Printf("skipping object of unknown type %T\n", t)
-        }
-    }
-    return linestrings
 }

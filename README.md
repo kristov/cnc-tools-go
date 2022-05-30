@@ -43,7 +43,7 @@ Because of the STDIN/STDOUT thing, commands can be composed:
 
 At any point you can view the operation:
 
-    $ cat cube.wkt | cnc --cmd=rotate --angle=45 | cnc-path-view
+    $ cat cube.wkt | cnc --cmd=rotate --angle=45 | cnc-view2d
 
 Which will open a window and show the shape on the screen.
 
