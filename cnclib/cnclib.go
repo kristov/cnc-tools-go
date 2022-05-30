@@ -13,7 +13,7 @@ type TwoPointLine struct {
     ey float64
 }
 
-func CuttingPath(ls orb.LineString) orb.LineString {
+func ToolPath(ls orb.LineString, toolrad float64) orb.LineString {
     fin := make(orb.LineString, 0, len(ls))
     if len(ls) < 2 {
         return fin
@@ -33,8 +33,8 @@ func CuttingPath(ls orb.LineString) orb.LineString {
             angle = angle + math.Pi
         }
         nangle := angle - (math.Pi / 2)
-        nx := math.Cos(nangle) * 2
-        ny := math.Sin(nangle) * 2
+        nx := math.Cos(nangle) * toolrad
+        ny := math.Sin(nangle) * toolrad
         tpn = append(tpn, TwoPointLine{zify(sx+nx),zify(sy+ny),zify(ex+nx),zify(ey+ny)})
     }
     var end TwoPointLine = tpn[0]
