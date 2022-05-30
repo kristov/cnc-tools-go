@@ -64,6 +64,7 @@ func doRotate(things []orb.Geometry, angle float64) {
         fmt.Println(wkt.MarshalString(fin))
     }
 }
+
 func doTranslate(things []orb.Geometry, dx, dy float64) {
     lss := getLineStrings(things)
     for i := 0; i < len(lss); i++ {
