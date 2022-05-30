@@ -13,7 +13,7 @@ type TwoPointLine struct {
     ey float64
 }
 
-func LineStringCuttingPath(ls orb.LineString) orb.LineString {
+func CuttingPath(ls orb.LineString) orb.LineString {
     fin := make(orb.LineString, 0, len(ls))
     if len(ls) < 2 {
         return fin
@@ -85,7 +85,7 @@ func line_intersect_point(a TwoPointLine, b TwoPointLine) orb.Point {
     return orb.Point{zify(x), zify(y)}
 }
 
-func LineStringTranslate(ls orb.LineString, dx, dy float64) orb.LineString {
+func Translate(ls orb.LineString, dx, dy float64) orb.LineString {
     fin := make(orb.LineString, 0, len(ls))
     for i := 0; i < len(ls); i++ {
         fin = append(fin, orb.Point{zify(ls[i][0] + dx), zify(ls[i][1] + dy)})
@@ -93,12 +93,28 @@ func LineStringTranslate(ls orb.LineString, dx, dy float64) orb.LineString {
     return fin
 }
 
-func LineStringRotate(ls orb.LineString, radians float64) orb.LineString {
+func Rotate(ls orb.LineString, radians float64) orb.LineString {
     fin := make(orb.LineString, 0, len(ls))
     mat := mgl32.Rotate2D(float32(radians))
     for i := 0; i < len(ls); i++ {
         p := mat.Mul2x1(mgl32.Vec2{float32(ls[i][0]), float32(ls[i][1])})
         fin = append(fin, orb.Point{zify(float64(p[0])), zify(float64(p[1]))})
+    }
+    return fin
+}
+
+func MirrorY(ls orb.LineString) orb.LineString {
+    fin := make(orb.LineString, 0, len(ls))
+    for i := 0; i < len(ls); i++ {
+        fin = append(fin, orb.Point{zify(0 - ls[i][0]), zify(ls[i][1])})
+    }
+    return fin
+}
+
+func MirrorX(ls orb.LineString) orb.LineString {
+    fin := make(orb.LineString, 0, len(ls))
+    for i := 0; i < len(ls); i++ {
+        fin = append(fin, orb.Point{zify(ls[i][0]), zify(0 - ls[i][1])})
     }
     return fin
 }

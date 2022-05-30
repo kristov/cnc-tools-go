@@ -34,16 +34,36 @@ func main() {
     flag.Float64Var(&dx, "dx", 0.0, "Delta X")
     flag.Float64Var(&dy, "dy", 0.0, "Delta Y")
     flag.Float64Var(&radius, "radius", 0.0, "Radius of cutting tool")
-    flag.Float64Var(&angle, "angle", 0.0, "Angle of rotation")
+    flag.Float64Var(&angle, "angle", 0.0, "Angle of rotation in degrees")
     flag.Parse()
 
+    lss := getLineStrings(things)
     switch {
         case cmd == "trans":
-            doTranslate(things, dx, dy)
+            for i := 0; i < len(lss); i++ {
+                fin := cnclib.Translate(lss[i], dx, dy)
+                fmt.Println(wkt.MarshalString(fin))
+            }
         case cmd == "toolpath":
-            doToolpath(things, radius)
+            for i := 0; i < len(lss); i++ {
+                fin := cnclib.CuttingPath(lss[i])
+                fmt.Println(wkt.MarshalString(fin))
+            }
         case cmd == "rotate":
-            doRotate(things, angle)
+            for i := 0; i < len(lss); i++ {
+                fin := cnclib.Rotate(lss[i], angle / 57.29578)
+                fmt.Println(wkt.MarshalString(fin))
+            }
+        case cmd == "mirrory":
+            for i := 0; i < len(lss); i++ {
+                fin := cnclib.MirrorY(lss[i])
+                fmt.Println(wkt.MarshalString(fin))
+            }
+        case cmd == "mirrorx":
+            for i := 0; i < len(lss); i++ {
+                fin := cnclib.MirrorX(lss[i])
+                fmt.Println(wkt.MarshalString(fin))
+            }
         default:
             printHelp()
     }
@@ -52,33 +72,11 @@ func main() {
 func printHelp() {
     fmt.Println("cat geometry.wkt | cnc [command] [arg1, arg2, arg3]")
     fmt.Println("")
-    fmt.Println("  COMMANDS:")
-    fmt.Println("")
-    fmt.Println("    trans - cnc trans --dx 10.0 --dy 5.2")
-}
-
-func doRotate(things []orb.Geometry, angle float64) {
-    lss := getLineStrings(things)
-    for i := 0; i < len(lss); i++ {
-        fin := cnclib.LineStringRotate(lss[i], angle / 57.29578)
-        fmt.Println(wkt.MarshalString(fin))
-    }
-}
-
-func doTranslate(things []orb.Geometry, dx, dy float64) {
-    lss := getLineStrings(things)
-    for i := 0; i < len(lss); i++ {
-        fin := cnclib.LineStringTranslate(lss[i], dx, dy)
-        fmt.Println(wkt.MarshalString(fin))
-    }
-}
-
-func doToolpath(things []orb.Geometry, radius float64) {
-    lss := getLineStrings(things)
-    for i := 0; i < len(lss); i++ {
-        fin := cnclib.LineStringCuttingPath(lss[i])
-        fmt.Println(wkt.MarshalString(fin))
-    }
+    fmt.Println("    cnc --cmd=trans --dx=10.0 --dy=5.2")
+    fmt.Println("    cnc --cmd=rotate --angle=45.0")
+    fmt.Println("    cnc --cmd=mirrory")
+    fmt.Println("    cnc --cmd=mirrorx")
+    fmt.Println("    cnc --cmd=toolpath")
 }
 
 func getLineStrings(things []orb.Geometry) []orb.LineString {
