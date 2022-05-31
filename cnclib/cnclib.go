@@ -119,6 +119,12 @@ func MirrorX(ls orb.LineString) orb.LineString {
     return fin
 }
 
+func Reverse(ls orb.LineString) orb.LineString {
+    fin := ls.Clone()
+    fin.Reverse()
+    return fin
+}
+
 func zify(value float64) float64 {
     if value < 0.000001 && value > -0.000001 {
         return 0.0

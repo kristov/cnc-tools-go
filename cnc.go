@@ -83,6 +83,11 @@ func main() {
                 fin := cnclib.MirrorY(lss[i])
                 fmt.Println(wkt.MarshalString(fin))
             }
+        case "reverse":
+            for i := 0; i < len(lss); i++ {
+                fin := cnclib.Reverse(lss[i])
+                fmt.Println(wkt.MarshalString(fin))
+            }
         case "toolpath":
             tpcmd.Parse(os.Args[2:])
             for i := 0; i < len(lss); i++ {
