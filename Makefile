@@ -1,8 +1,8 @@
-TOOLS := cnc cnc-stl-view cnc-view2d
+TOOLS := cnc cnc-stl-view cnc-view2d svg2wkt
 
 all: $(TOOLS)
 
-%: %.go
+%: %.go cnclib/cnclib.go
 	go build -o $@ $<
 
 clean:

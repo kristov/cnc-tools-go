@@ -136,6 +136,10 @@ func GeometryToLineStrings(geos []orb.Geometry) []orb.LineString {
                 for j := 0; j < len(t); j++ {
                     linestrings = append(linestrings, orb.LineString(t[j]))
                 }
+            case orb.MultiLineString:
+                for j := 0; j < len(t); j++ {
+                    linestrings = append(linestrings, orb.LineString(t[j]))
+                }
         }
     }
     return linestrings
