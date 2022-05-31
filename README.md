@@ -115,3 +115,49 @@ TODO:
 
 Should spit out GCode.
 
+## Cookbook
+
+Common recipies
+
+### Cut out a circle from 2mm thick ply
+
+#### Generate the geometry
+
+Open OpenSCAD and create a circle:
+
+    circle(r=20);
+
+This will generate a circle of a diameter of 40mm. Render it using `F6`. The export it to an SVG file called `circle.svg`.
+
+#### Convert the SVG to WKT
+
+This command will turn the SVG into a MULTILINESTRING WKT command. Make sure the output is as you are expecting.
+
+    $ cat circle.svg | svg2wkt
+
+#### Translate the circle into the work area
+
+By default, OpenSCAD generates a circle around point 0,0. This will mean your CNC machine will try to move in the negative X,Y direction, and this may hit limit switches or break your machine. So you either need to translate the circle in OpenSCAD, or use the "translate" command of the `cnc` tool to move it into positive X,Y coordinates:
+
+    $ cat circle.svg | svg2wkt | cnc translate --dx=20 --dy=20
+
+#### Verify the circle is translated correctly
+
+Now you can view the result and make sure the circle is completely visible:
+
+    $ cat circle.svg | svg2wkt | cnc translate --dx=20 --dy=20 | cnc-view2d
+
+#### Generate and test GCode
+
+You can then generate some test GCode that does *not* plunge the cutting tool into the work. It will trace out the path 1mm above the top of the work. Note: this assumes the Z axis of the CNC machine has been set up to the tool is barely touching the surface of the work at Z=0.0 - this is *very important*. If you have not set up the machine like this, you may need to adjust your clearance and depth values to match, but I don't recommend it. I think it's better to set your Z axis to be zeroed so the cutting tool is just touching the top surface of the work. It means any negative Z value is inside the work, and positive Z values are above the work:
+
+    $ cat circle.svg | svg2wkt | cnc translate --dx=20 --dy=20 | cnc gcode --clearance=2.0 --depth=1.0 > circle_test.gcode
+
+The GCode will lift the tool 2mm above the work for travelling to the start point. It will then descend to 1.0mm *above* the work to simulate the cutting. This allows you to run this GCode in a real machine to validate it will not hit X or Y limits.
+
+#### Generate real GCode
+
+    $ cat circle.svg | svg2wkt | cnc translate --dx=20 --dy=20 | cnc gcode --clearance=2.0 --depth=-2.01 > circle.gcode
+
+Now the tool will descend to -2.1mm below the surface of the work to begin cutting. Obviously this will mean the tool passes through the work, so there needs to be a sacrificial block underneath the work otherwise the tool will cut 0.1mm deep into the surface of the CNC table - *not good*. Always have a sacrificial block under the work.
+
