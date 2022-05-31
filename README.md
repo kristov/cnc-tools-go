@@ -91,13 +91,21 @@ Because of the STDIN/STDOUT thing, commands can be composed:
 
 Beware of multiple `--echo` flags in a chain of commands. The input is not aware that a shape from a previous output was an echo and will perform an operation on the echo like it was just another path.
 
-## Viewing
+## The `cnc-view2d` tool
 
 At any point you can view the result of an operation:
 
     $ cat cube.wkt | cnc rotate --angle=45 | cnc-view2d
 
 Which will open a window and show the shape on the screen. The mouse wheel will zoom in and out. Pan is not available. If you need more complex viewing functionality, consider outputting to SVG.
+
+## The `svg2wkt` tool
+
+This tool takes an SVG file as input on STDIN and produces WKT as output:
+
+    $ cat resources/moon.svg | ./svg2wkt | ./cnc translate --dx=30 --dy=30 | ./cnc-view2d
+
+It is very basic and will only work with `<path d="...">` elements in the root `<svg>` parent. It does not handle elements like `<circle>`, `<line>`, `<polygon>` etc. Furthermore, the paths processed must use absolute coordinates ("M", "L") not their relative versions ("m", "l"). It was tested based on what OpenSCAD exports.
 
 ## Generating GCode
 
