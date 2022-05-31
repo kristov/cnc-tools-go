@@ -40,12 +40,18 @@ func main() {
     roeco := rocmd.Bool("echo", false, "Echo the input geometry")
     roang := rocmd.Float64("angle", 0.0, "Angle of rotation in degrees")
 
-    //mxcmd := flag.NewFlagSet("mirrorx", flag.ExitOnError)
-    //mycmd := flag.NewFlagSet("mirrory", flag.ExitOnError)
+    mxcmd := flag.NewFlagSet("mirrorx", flag.ExitOnError)
+    mxeco := mxcmd.Bool("echo", false, "Echo the input geometry")
+
+    mycmd := flag.NewFlagSet("mirrory", flag.ExitOnError)
+    myeco := mycmd.Bool("echo", false, "Echo the input geometry")
 
     tpcmd := flag.NewFlagSet("toolpath", flag.ExitOnError)
     tpeco := tpcmd.Bool("echo", false, "Echo the input geometry")
     tprad := tpcmd.Float64("radius", 1.5, "Radius of cutting tool")
+
+    rvcmd := flag.NewFlagSet("reverse", flag.ExitOnError)
+    rveco := rvcmd.Bool("echo", false, "Echo the input geometry")
 
     gccmd := flag.NewFlagSet("gcode", flag.ExitOnError)
     gceco := gccmd.Bool("echo", false, "Echo the input geometry (as a GCode comment)")
@@ -74,17 +80,29 @@ func main() {
                 fmt.Println(wkt.MarshalString(fin))
             }
         case "mirrorx":
+            mxcmd.Parse(os.Args[2:])
             for i := 0; i < len(lss); i++ {
+                if *mxeco {
+                    fmt.Println(wkt.MarshalString(lss[i]))
+                }
                 fin := cnclib.MirrorX(lss[i])
                 fmt.Println(wkt.MarshalString(fin))
             }
         case "mirrory":
+            mycmd.Parse(os.Args[2:])
             for i := 0; i < len(lss); i++ {
+                if *myeco {
+                    fmt.Println(wkt.MarshalString(lss[i]))
+                }
                 fin := cnclib.MirrorY(lss[i])
                 fmt.Println(wkt.MarshalString(fin))
             }
         case "reverse":
+            rvcmd.Parse(os.Args[2:])
             for i := 0; i < len(lss); i++ {
+                if *rveco {
+                    fmt.Println(wkt.MarshalString(lss[i]))
+                }
                 fin := cnclib.Reverse(lss[i])
                 fmt.Println(wkt.MarshalString(fin))
             }

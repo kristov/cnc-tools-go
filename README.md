@@ -62,6 +62,16 @@ This mirrors the shape in the X axis (produces a mirror below).
     $ cat cube.wkt | cnc mirrorx
     LINESTRING(0 0,20 0,20 -20,0 -20,0 0)
 
+### `reverse`
+
+Reverses the direction of the points in a LINESTRING. Hard to demonstrate with the cube:
+
+    $ cat cube.wkt | cnc reverse --echo
+    LINESTRING(0 0,20 0,20 20,0 20,0 0)
+    LINESTRING(0 0,0 20,20 20,20 0,0 0)
+
+(see "echo" below for why I did that)
+
 ### `toolpath`
 
 Generate a toolpath for cutting. This generates an "outline" around the shape, at a distance of the radius of the cutting tool:
@@ -70,7 +80,11 @@ Generate a toolpath for cutting. This generates an "outline" around the shape, a
 
 This is generated in a counter-clockwise direction for exterior shapes. If you want to cut out a shape, make sure the path of the shape is counter-clockwise. If you want to generate a hole make sure the path goes clockwise. This is due to the spindle rotation of the CNC being clockwise. You want the tool cutting direction to be opposite to the direction of the shape you are cutting out.
 
-TODO: for closed linestrings it doesn't do the final intersection yet.
+WARNING! The "toolpath" code is broken for negative (hole) cuts containing complex corners. To illustrate, see this:
+
+    cat resources/moon.svg | svg2wkt | cnc translate --dx=30 --dy=30 | cnc toolpath --echo | cnc-view2d
+
+See how the sharp corners are all messed up? Needs work.
 
 ## `gcode`
 
@@ -119,9 +133,13 @@ It is actually better to set `maxx` and `maxy` to the size of the *work* piece, 
 
 This tool takes an SVG file as input on STDIN and produces WKT as output:
 
-    $ cat resources/moon.svg | ./svg2wkt | ./cnc translate --dx=30 --dy=30 | ./cnc-view2d
+    $ cat resources/moon.svg | svg2wkt | cnc translate --dx=30 --dy=30 | cnc-view2d
 
 It is very basic and will only work with `<path d="...">` elements in the root `<svg>` parent. It does not handle elements like `<circle>`, `<line>`, `<polygon>` etc. Furthermore, the paths processed must use absolute coordinates ("M", "L") not their relative versions ("m", "l"). It was tested based on what OpenSCAD exports.
+
+I also noticed that OpenSCAD seems to be generating SVG with clockwise winding, so I have to "reverse" the output of `svg2wkt` to compensate:
+
+    $ cat resources/moon.svg | svg2wkt | cnc reverse | cnc translate --dx=30 --dy=30 | cnc-view2d
 
 ## Cookbook
 
