@@ -72,6 +72,18 @@ This is generated in a counter-clockwise direction for exterior shapes. If you w
 
 TODO: for closed linestrings it doesn't do the final intersection yet.
 
+## `gcode`
+
+The `gcode` command will generate very basic GCode for each LINESTRING in the input. The `clearance` and `depth` parameters control how the tool is lifted while moving (clearance) and to what height the Z axis will move to when cutting (depth). The default values are meant to be relatively safe (no cutting will take place), assuming Z=0 is where the cutting tool is barely in contact with the work:
+
+    $ cat cube.wkt | cnc gcode --clearance=2.0 --depth=1.0
+
+This means when you actually want to make a real cut you will need to provide an appropriate `depth` value (negative).
+
+Note: The way I do my cuts is to clamp the work piece to the bed of the CNC machine, with a sacrificial block underneath it. This is because I want the cutting tool to go all the way though the work so I need the tool to be cutting to a depth below the underneath of the work. Without a sacrificial block this means the tool will cut into the metal bed of the CNC machine - *bad mojo*. I then turn on the spindle, jog the X and Y to the corner of the work, and then jog the Z until the spinning tool is *just* touching the work. I then zero the machine coordinates.
+
+I now know that any negative Z position is cutting down into the work, and any positive Z position is above the work. If my work is 2mm thick, I will set the `depth` parameter to `--depth=-2.1` meaning the tool will barely break the bottom surface of the work and not chew up too much of the sacrificial block.
+
 ### The `echo` option
 
 It can be useful to echo the original input for viewing purposes:
@@ -97,7 +109,11 @@ At any point you can view the result of an operation:
 
     $ cat cube.wkt | cnc rotate --angle=45 | cnc-view2d
 
-Which will open a window and show the shape on the screen. The mouse wheel will zoom in and out. Pan is not available. If you need more complex viewing functionality, consider outputting to SVG.
+Which will open a window and show the shape on the screen. The mouse wheel will zoom in and out. Pan is not available. The view will show a grey dashed box representing the maximum X and Y travel for the machine. These values default to 200x290 which are the defaults for my machine, so you might need to change them. The `maxx` and `maxy` parameters allow control over the size of this box. It is just a visual aid - the tool does not check if any shapes go outside this box. If your machine has a 100x100 maximum cutting area:
+
+    $ cat cube.wkt | cnc rotate --angle=45 | cnc-view2d --maxx=100 --maxy=100
+
+It is actually better to set `maxx` and `maxy` to the size of the *work* piece, which will be on a case-by-case basis. There are also `width` and `height` options for the default size of the window, but resizing the window manually also works.
 
 ## The `svg2wkt` tool
 
@@ -107,19 +123,11 @@ This tool takes an SVG file as input on STDIN and produces WKT as output:
 
 It is very basic and will only work with `<path d="...">` elements in the root `<svg>` parent. It does not handle elements like `<circle>`, `<line>`, `<polygon>` etc. Furthermore, the paths processed must use absolute coordinates ("M", "L") not their relative versions ("m", "l"). It was tested based on what OpenSCAD exports.
 
-## Generating GCode
-
-TODO:
-
-    $ cat cube.wkt | cnc gcode
-
-Should spit out GCode.
-
 ## Cookbook
 
-Common recipies
+Common recipies. There is only 1 so far, but more to come I guess.
 
-### Cut out a circle from 2mm thick ply
+### 1) Cut out a circle from 2mm thick ply
 
 #### Generate the geometry
 
