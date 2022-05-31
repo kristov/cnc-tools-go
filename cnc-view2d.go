@@ -23,15 +23,31 @@ type Mesh struct {
     uv_id uint32
     tex_id uint32
     nr_vertices uint32
-    scale float64
+}
+
+type Context struct {
+    Width int
+    Height int
+    Maxx int
+    Maxy int
+    Scale float64
 }
 
 func main() {
     runtime.LockOSThread()
 
-    var width int
-    var height int
-    var scale float64 = 1.0
+    var ctx Context
+    ctx.Width = 640
+    ctx.Height = 480
+    ctx.Maxx = 200
+    ctx.Maxy = 290
+    ctx.Scale = 1.0
+
+    flag.IntVar(&ctx.Width, "width", 640, "Window width")
+    flag.IntVar(&ctx.Height, "height", 480, "Window height")
+    flag.IntVar(&ctx.Maxx, "maxx", 200, "Maximum X travel on machine")
+    flag.IntVar(&ctx.Maxy, "maxy", 290, "Maximum Y travel on machine")
+    flag.Parse()
 
     var things []orb.Geometry
     scanner := bufio.NewScanner(os.Stdin)
@@ -47,16 +63,12 @@ func main() {
     }
     lss := cnclib.GeometryToLineStrings(things)
 
-    flag.IntVar(&width, "width", 640, "Window width")
-    flag.IntVar(&height, "height", 480, "Window height")
-    flag.Parse()
-
     if err := glfw.Init(); err != nil {
         panic(err)
     }
     defer glfw.Terminate()
 
-    window, err := glfw.CreateWindow(width, height, "test", nil, nil)
+    window, err := glfw.CreateWindow(ctx.Width, ctx.Height, "test", nil, nil)
     if err != nil {
         panic(err)
     }
@@ -71,25 +83,25 @@ func main() {
     fmt.Fprintln(os.Stderr, "OpenGL version", version)
 
     initGL()
-    gl.Viewport(0, 0, int32(width), int32(height))
-    mesh := generateBuffers(width, height)
-    drawLineStrings(lss, width, height, scale)
+    gl.Viewport(0, 0, int32(ctx.Width), int32(ctx.Height))
+    mesh := generateBuffers()
+    drawLineStrings(lss, &ctx)
 
     window.SetSizeCallback(func(w *glfw.Window, nw int, nh int) {
-        width = nw
-        height = nh
-        gl.Viewport(0, 0, int32(width), int32(height))
-        drawLineStrings(lss, width, height, scale)
+        ctx.Width = nw
+        ctx.Height = nh
+        gl.Viewport(0, 0, int32(ctx.Width), int32(ctx.Height))
+        drawLineStrings(lss, &ctx)
     })
 
     window.SetScrollCallback(func(w *glfw.Window, xoff float64, yoff float64) {
         if yoff > 0 {
-            scale += 0.1
-            drawLineStrings(lss, width, height, scale)
+            ctx.Scale += 0.1
+            drawLineStrings(lss, &ctx)
         }
         if yoff < 0 {
-            scale -= 0.1
-            drawLineStrings(lss, width, height, scale)
+            ctx.Scale -= 0.1
+            drawLineStrings(lss, &ctx)
         }
     })
 
@@ -101,9 +113,9 @@ func main() {
     }
 }
 
-func drawLineStrings(lss []orb.LineString, width int, height int, scale float64) {
-    dc := gg.NewContext(width, height)
-    dc.ScaleAbout(scale, scale, 0, 0)
+func drawLineStrings(lss []orb.LineString, ctx *Context) {
+    dc := gg.NewContext(ctx.Width, ctx.Height)
+    dc.ScaleAbout(ctx.Scale, ctx.Scale, 0, 0)
     var colors = [][]float64{
         {1.0, 0.0, 0.0},
         {0.0, 1.0, 0.0},
@@ -123,6 +135,10 @@ func drawLineStrings(lss []orb.LineString, width int, height int, scale float64)
         }
         dc.SetRGB(colors[c][0], colors[c][1], colors[c][2])
     }
+    dc.SetRGB(0.6, 0.6, 0.6)
+    dc.SetDash(4.0, 4.0)
+    dc.DrawRectangle(0.0, 0.0, float64(ctx.Maxx), float64(ctx.Maxy))
+    dc.Stroke()
     dcimg := dc.Image()
     bounds := dcimg.Bounds()
     img := image.NewNRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
@@ -143,7 +159,7 @@ func buildTexture(img *image.NRGBA) {
         gl.Ptr(img.Pix))
 }
 
-func generateBuffers(width int, height int) Mesh {
+func generateBuffers() Mesh {
     var mesh Mesh
     mesh.nr_vertices = 6
     var vertexes = []float32{
