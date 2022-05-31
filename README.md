@@ -14,7 +14,7 @@ Programs accept multiple WKT objects, one per line. This means a WKT shape can n
 
 This lines up very well with spindle cutting tools rotating in a clockwise direction when looking down onto the work. The cutting tool is a cylinder of blades, but looking down from above the tool is a circle rotating in a clockwise direction. Imagine the tool cutting a straight line through the work from bottom to top (or from front to back: moving in a positive Y direction). On the left hand side the blades of the tool are cutting into the work in the same direction of travel as the tool is moving through the work. On the right hand side the blades are cutting into the work in the opposite direction of travel of the tool. If you are cutting through thermoplastic you will get a clean cut on the left hand side, but on the right the edge of the cut may have deposits of melted plastic. Therefore, if you are cutting out the outside edge of a shape you want the path to follow the shape in a counterclockwise direction. If you are cutting out a void from inside a shape you want the path to follow the hole in a clockwise direction. This diagram illustrates this point:
 
-![Diagram explaining cutting direction](https://github.com/kristov/cnc-tools-go/blob/master/tool_direction?raw=true)
+![Diagram explaining cutting direction](https://github.com/kristov/cnc-tools-go/blob/master/tool_direction.png?raw=true)
 
 In short: Make your exterior outline as a counterclockwise path, and any interior holes to be cut as clockwise paths. You can use the `cnc` tool to reverse the direction of a path (LINESTRING) if you need to.
 
