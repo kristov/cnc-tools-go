@@ -124,11 +124,7 @@ func drawLineStrings(lss []orb.LineString, ctx *Context) {
     var c uint32 = 0
     dc.SetRGB(colors[c][0], colors[c][1], colors[c][2])
     for i := 0; i < len(lss); i++ {
-        dc.MoveTo(lss[i][0][0], lss[i][0][1])
-        for j := 1; j < len(lss[i]); j++ {
-            dc.LineTo(lss[i][j][0], lss[i][j][1])
-        }
-        dc.Stroke()
+        drawLineString(dc, lss[i])
         c++
         if c > 2 {
             c = 0
@@ -145,6 +141,37 @@ func drawLineStrings(lss []orb.LineString, ctx *Context) {
     draw.Draw(img, img.Bounds(), dcimg, bounds.Min, draw.Src)
     buildTexture(img)
 }
+
+func drawLineString(dc *gg.Context, ls orb.LineString) {
+    dc.MoveTo(ls[0][0], ls[0][1])
+    for i := 1; i < len(ls); i++ {
+        dc.LineTo(ls[i][0], ls[i][1])
+    }
+    dc.Stroke()
+}
+
+/*
+func drawArrows(dc *gg.Context, ls orb.LineString) {
+    tpl := cnclib.LineStringToTwoPointLines(ls)
+    for i := 0; i < len(tpl); i++ {
+        dx := tpl[i].ex - tpl[i].sx
+        dy := tpl[i].ey - tpl[i].sy
+        angle := math.Atan(dy / dx)
+        if dx < 0 {
+            angle = angle + math.Pi
+        }
+        l1angle = angle + ? // to get angle of top arrow blade
+        l2angle = angle + ? // to get angle of bottom arrow blade
+        // calculate hypotenuse of line
+        // divide hypotenuse / 2
+        // calculate x,y on line of this mid point
+        // use l1angle and l2angle to calculate endpoints of arrow blades
+        // add x,y to endpoints
+        // blades go from x,y to these endpoints
+        // draw these lines
+    }
+}
+*/
 
 func buildTexture(img *image.NRGBA) {
     gl.TexImage2D(

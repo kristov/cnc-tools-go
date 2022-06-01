@@ -55,6 +55,14 @@ func ToolPath(ls orb.LineString, toolrad float64) orb.LineString {
     return fin
 }
 
+func LineStringToTwoPointLines(ls orb.LineString) []TwoPointLine {
+    tpl := make([]TwoPointLine, 0, len(ls) - 1)
+    for i := 1; i < len(ls); i++ {
+        tpl = append(tpl, TwoPointLine{ls[i-1][0],ls[i-1][1],ls[i][0],ls[i][1]})
+    }
+    return tpl
+}
+
 func line_intersect_point(a TwoPointLine, b TwoPointLine) orb.Point {
     sxa := a.sx
     sya := a.sy
