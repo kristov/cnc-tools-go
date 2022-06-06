@@ -6,6 +6,7 @@ import (
     "fmt"
     "strings"
     "runtime"
+    //"math"
     "github.com/go-gl/glfw/v3.2/glfw"
     "github.com/go-gl/gl/v2.1/gl"
     "github.com/fogleman/gg"
@@ -148,28 +149,46 @@ func drawLineString(dc *gg.Context, ls orb.LineString) {
         dc.LineTo(ls[i][0], ls[i][1])
     }
     dc.Stroke()
+    //drawArrows(dc, ls)
 }
 
 /*
 func drawArrows(dc *gg.Context, ls orb.LineString) {
     tpl := cnclib.LineStringToTwoPointLines(ls)
+    dc.SetDash(4.0, 4.0)
     for i := 0; i < len(tpl); i++ {
-        dx := tpl[i].ex - tpl[i].sx
-        dy := tpl[i].ey - tpl[i].sy
+        dx := tpl[i].Ex - tpl[i].Sx
+        dy := tpl[i].Ey - tpl[i].Sy
         angle := math.Atan(dy / dx)
         if dx < 0 {
             angle = angle + math.Pi
         }
-        l1angle = angle + ? // to get angle of top arrow blade
-        l2angle = angle + ? // to get angle of bottom arrow blade
-        // calculate hypotenuse of line
-        // divide hypotenuse / 2
-        // calculate x,y on line of this mid point
-        // use l1angle and l2angle to calculate endpoints of arrow blades
-        // add x,y to endpoints
-        // blades go from x,y to these endpoints
-        // draw these lines
+        fourtyfive := math.Pi / 4
+        l1angle := angle + (fourtyfive * 3)
+        l2angle := angle + (fourtyfive * 5)
+
+        hhypo := (dx / math.Cos(angle)) / 2
+        if dx == 0 {
+            hhypo = (dy / math.Sin(angle)) / 2
+        }
+        hsx := math.Cos(angle) * hhypo
+        hsy := math.Sin(angle) * hhypo
+
+        l1ex := math.Cos(l1angle) * 5
+        l1ey := math.Sin(l1angle) * 5
+
+        l2ex := math.Cos(l2angle) * 5
+        l2ey := math.Sin(l2angle) * 5
+
+        dc.MoveTo(tpl[i].Sx + hsx, tpl[i].Sy + hsy)
+        dc.LineTo(tpl[i].Sx + hsx + l1ex, tpl[i].Sy + hsy + l1ey)
+        dc.Stroke()
+
+        dc.MoveTo(tpl[i].Sx + hsx, tpl[i].Sy + hsy)
+        dc.LineTo(tpl[i].Sx + hsx + l2ex, tpl[i].Sy + hsy + l2ey)
+        dc.Stroke()
     }
+    dc.SetDash(0.0)
 }
 */
 
