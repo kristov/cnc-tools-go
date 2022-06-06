@@ -57,6 +57,7 @@ func main() {
     gceco := gccmd.Bool("echo", false, "Echo the input geometry (as a GCode comment)")
     gcclr := gccmd.Float64("clearance", 3.0, "Height tool is lifted to before rapid movement")
     gcdth := gccmd.Float64("depth", 1.0, "Height tool is dropped to before cutting")
+    gcfed := gccmd.Float64("feed", 100.0, "Feed rate for cutting")
 
     switch os.Args[1] {
         case "help":
@@ -122,6 +123,8 @@ func main() {
                 if *gceco {
                     gcodes = append(gcodes, fmt.Sprintf("( WKT: '%s' )", wkt.MarshalString(lss[i])))
                 }
+                gcodes = append(gcodes, "G90")
+                gcodes = append(gcodes, GFeed(*gcfed))
                 gcodes = append(gcodes, GToolUp(*gcclr))
                 gcodes = append(gcodes, GMoveTo(lss[i][0]))
                 gcodes = append(gcodes, GToolDown(*gcdth))
@@ -147,6 +150,11 @@ func PrintHelp() {
     fmt.Println("    cnc mirrory")
     fmt.Println("    cnc mirrorx")
     fmt.Println("    cnc toolpath")
+    fmt.Println("    cnc gcode --clearance=3.0 --depth=-1.0 --feed=100.0")
+}
+
+func GFeed(feed float64) string {
+    return fmt.Sprintf("F%0.1f", feed)
 }
 
 func GMoveTo(point orb.Point) string {
