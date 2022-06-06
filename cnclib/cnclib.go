@@ -7,10 +7,10 @@ import (
 )
 
 type TwoPointLine struct {
-    sx float64
-    sy float64
-    ex float64
-    ey float64
+    Sx float64
+    Sy float64
+    Ex float64
+    Ey float64
 }
 
 func ToolPath(ls orb.LineString, toolrad float64) orb.LineString {
@@ -38,7 +38,7 @@ func ToolPath(ls orb.LineString, toolrad float64) orb.LineString {
         tpn = append(tpn, TwoPointLine{zify(sx+nx),zify(sy+ny),zify(ex+nx),zify(ey+ny)})
     }
     var end TwoPointLine = tpn[0]
-    fin = append(fin, orb.Point{zify(tpn[0].sx), zify(tpn[0].sy)})
+    fin = append(fin, orb.Point{zify(tpn[0].Sx), zify(tpn[0].Sy)})
     for i := 1; i < len(tpn); i++ {
         end = tpn[i]
         p := line_intersect_point(tpn[i-1], tpn[i])
@@ -50,7 +50,7 @@ func ToolPath(ls orb.LineString, toolrad float64) orb.LineString {
         fin[0][0] = p[0]
         fin[0][1] = p[1]
     } else {
-        fin = append(fin, orb.Point{zify(end.ex), zify(end.ey)})
+        fin = append(fin, orb.Point{zify(end.Ex), zify(end.Ey)})
     }
     return fin
 }
@@ -64,14 +64,14 @@ func LineStringToTwoPointLines(ls orb.LineString) []TwoPointLine {
 }
 
 func line_intersect_point(a TwoPointLine, b TwoPointLine) orb.Point {
-    sxa := a.sx
-    sya := a.sy
-    exa := a.ex
-    eya := a.ey
-    sxb := b.sx
-    syb := b.sy
-    exb := b.ex
-    eyb := b.ey
+    sxa := a.Sx
+    sya := a.Sy
+    exa := a.Ex
+    eya := a.Ey
+    sxb := b.Sx
+    syb := b.Sy
+    exb := b.Ex
+    eyb := b.Ey
     if sxa == exa {
         slb := (eyb - syb) / (exb - sxb)
         yib := syb - slb * sxb
