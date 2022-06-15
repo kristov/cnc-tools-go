@@ -118,23 +118,25 @@ func main() {
             }
         case "gcode":
             gccmd.Parse(os.Args[2:])
+            var gcodes []string
+            gcodes = append(gcodes, "G90")
+            gcodes = append(gcodes, GFeed(*gcfed))
+            gcodes = append(gcodes, GToolUp(*gcclr))
             for i := 0; i < len(lss); i++ {
-                var gcodes []string
                 if *gceco {
-                    gcodes = append(gcodes, fmt.Sprintf("( WKT: '%s' )", wkt.MarshalString(lss[i])))
+                    gcodes = append(gcodes, fmt.Sprintf("; %s", wkt.MarshalString(lss[i])))
                 }
-                gcodes = append(gcodes, "G90")
-                gcodes = append(gcodes, GFeed(*gcfed))
-                gcodes = append(gcodes, GToolUp(*gcclr))
                 gcodes = append(gcodes, GMoveTo(lss[i][0]))
                 gcodes = append(gcodes, GToolDown(*gcdth))
                 for j := 1; j < len(lss[i]); j++ {
                     gcodes = append(gcodes, GCutTo(lss[i][j]))
                 }
                 gcodes = append(gcodes, GToolUp(*gcclr))
-                for j := 0; j < len(gcodes); j++ {
-                    fmt.Println(gcodes[j])
-                }
+            }
+            gcodes = append(gcodes, "G00 X0 Y0")
+            gcodes = append(gcodes, "G00 Z0")
+            for j := 0; j < len(gcodes); j++ {
+                fmt.Println(gcodes[j])
             }
         default:
             fmt.Printf("unknown command '%s', choose one of: translate, rotate, mirrorx, mirrory, toolpath, help\n", os.Args[1])
