@@ -1,4 +1,3 @@
-src/github.com
-src/golang.org
-pkg/linux_amd64
-bin/*
+cnc
+cnc-view2d
+svg2wkt
