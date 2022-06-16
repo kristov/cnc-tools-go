@@ -49,6 +49,10 @@ func main() {
     bbcmd := flag.NewFlagSet("bbox", flag.ExitOnError)
     bbeco := bbcmd.Bool("echo", false, "Echo the input geometry")
 
+    pfcmd := flag.NewFlagSet("polyfill", flag.ExitOnError)
+    pfeco := pfcmd.Bool("echo", false, "Echo the input geometry")
+    pfrad := pfcmd.Float64("radius", 1.5, "Radius of cutting tool")
+
     tpcmd := flag.NewFlagSet("toolpath", flag.ExitOnError)
     tpeco := tpcmd.Bool("echo", false, "Echo the input geometry")
     tprad := tpcmd.Float64("radius", 1.5, "Radius of cutting tool")
@@ -108,6 +112,15 @@ func main() {
                     fmt.Println(wkt.MarshalString(lss[i]))
                 }
                 fin := cnclib.BoundingBox(lss[i])
+                fmt.Println(wkt.MarshalString(fin))
+            }
+        case "polyfill":
+            pfcmd.Parse(os.Args[2:])
+            for i := 0; i < len(lss); i++ {
+                if *pfeco {
+                    fmt.Println(wkt.MarshalString(lss[i]))
+                }
+                fin := cnclib.PolyFill(lss[i], *pfrad)
                 fmt.Println(wkt.MarshalString(fin))
             }
         case "reverse":

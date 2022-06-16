@@ -1,8 +1,8 @@
 package cnclib
 
 import (
-        "fmt"
     "math"
+    "cnc-tools-go/line2d"
     "github.com/paulmach/orb"
     "github.com/go-gl/mathgl/mgl32"
 )
@@ -64,49 +64,79 @@ func LineStringToTwoPointLines(ls orb.LineString) []TwoPointLine {
     return tpl
 }
 
+func LineString2PointLines(ls orb.LineString) []line2d.PointLine {
+    tpl := make([]line2d.PointLine, 0, len(ls) - 1)
+    for i := 1; i < len(ls); i++ {
+        tpl = append(tpl, line2d.PointLine{ls[i-1][0],ls[i-1][1],ls[i][0],ls[i][1]})
+    }
+    return tpl
+}
+
 func PolyFill(ls orb.LineString, toolrad float64) orb.LineString {
     min, max := polygonBounds(ls)
 
+    // Start and end the polyfill lines off from the edge of the polygon.
     var startx = min[0] + toolrad
     var endx = max[0] - toolrad
-    //var dbl = (toolrad * 2) * 0.9; // 90% of the tool diameter
-    var allPoints orb.LineString
 
-    twoPointLines := LineString2PointLines(ls)
+    // make distance between lines 90% of the tool diameter.
+    var distance_between_lines = (toolrad * 2) * 0.9;
+
+    // Convert out LineString into line2d PointLine objects because thats where
+    // our intersection logic is.
+    pointLines := LineString2PointLines(ls)
+    lines := make(orb.LineString, 0)
+
+    // These are the indexes of the start point and end point of each pass.
+    // These are flipped on each line so the fill lines make a snake trail.
+    var sp uint32 = 0
+    var ep uint32 = 1
 
     for {
+        // While we have not reached the right hand edge of the polygon
         if startx >= endx {
             break
         }
-        L := TwoPointLine{startx,min[1],startx,max[1]}
-        twoIntersects := make([]orb.Point, 2)
-        var tii = 0
-        for i := 0; i < len(twoPointLines); i++ {
-            fmt.Printf("intersect of [%0.2f,%0.2f - %0.2f,%0.2f] AND [%0.2f,%0.2f - %0.2f,%0.2f]\n", L[0], L[1], L[2], L[3], twoPointLines[i][0], twoPointLines[i][1], twoPointLines[i][2], twoPointLines[i][3])
-            inter := line_intersect_point(L, twoPointLines[i])
-            twoIntersects[tii] = inter
-            tii++
-            if tii > 1 {
+
+        // Generate a vertical line at startx
+        L := line2d.PointLine{startx,min[1],startx,max[1]}
+
+        // We are expecting two intersections, one at the bottom of the
+        // polygon, one at the top.
+        twoInts := make([]line2d.Point, 2)
+
+        // Index to hold one of the two the intersection points
+        var ti uint32 = 0
+
+        // Loop over all the lines in the polygon and look for an intersection
+        // point with our vertical line.
+        for i := 0; i < len(pointLines); i++ {
+            ipoint, inter := line2d.PointLineIntersect(L, pointLines[i])
+            if !inter {
+                continue
+            }
+            twoInts[ti] = ipoint
+            ti++
+            if ti > 1 {
+                // TODO: we actually need to handle this case for polygons with
+                // "dips" inward. These need to break the polyfill lines in two
+                // (or more) with a tool lift inbetween. This means PolyFill()
+                // will need to return a MULTILINESTRING geometry.
                 break
             }
         }
-    }
-
-/*
-    while (start_x < (max_x - radius)) {
-        L = TwoPointLine from [start_x, min_y - 1] to [start_x, max_y + 1]
-        two_intersects = [2]
-        foreach TwoPointLine as P in polygon {
-            intersection = between P and L
-            if intersection is within P {
-                two_intersects.append(intersection)
-            }
+        // Advance the vertical line across to the right.
+        startx += distance_between_lines
+        if ti == 2 {
+            // If we have two intersection points then append them to the LineString.
+            lines = append(lines, orb.Point{twoInts[sp][0],twoInts[sp][1]})
+            lines = append(lines, orb.Point{twoInts[ep][0],twoInts[ep][1]})
+            // Flip these variables for the "snake" effect.
+            sp = 1 - sp
+            ep = 1 - ep
         }
-        all_lines.append(TwoPointLine(two_intersects))
-        start_x = start_x + distance_between_lines
     }
-*/
-    return allPoints
+    return lines
 }
 
 func BoundingBox(ls orb.LineString) orb.LineString {
