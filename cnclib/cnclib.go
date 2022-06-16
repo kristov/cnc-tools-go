@@ -1,6 +1,7 @@
 package cnclib
 
 import (
+        "fmt"
     "math"
     "github.com/paulmach/orb"
     "github.com/go-gl/mathgl/mgl32"
@@ -61,6 +62,51 @@ func LineStringToTwoPointLines(ls orb.LineString) []TwoPointLine {
         tpl = append(tpl, TwoPointLine{ls[i-1][0],ls[i-1][1],ls[i][0],ls[i][1]})
     }
     return tpl
+}
+
+func PolyFill(ls orb.LineString, toolrad float64) orb.LineString {
+    min, max := polygonBounds(ls)
+
+    var startx = min[0] + toolrad
+    var endx = max[0] - toolrad
+    //var dbl = (toolrad * 2) * 0.9; // 90% of the tool diameter
+    var allPoints orb.LineString
+
+    twoPointLines := LineString2PointLines(ls)
+
+    for {
+        if startx >= endx {
+            break
+        }
+        L := TwoPointLine{startx,min[1],startx,max[1]}
+        twoIntersects := make([]orb.Point, 2)
+        var tii = 0
+        for i := 0; i < len(twoPointLines); i++ {
+            fmt.Printf("intersect of [%0.2f,%0.2f - %0.2f,%0.2f] AND [%0.2f,%0.2f - %0.2f,%0.2f]\n", L[0], L[1], L[2], L[3], twoPointLines[i][0], twoPointLines[i][1], twoPointLines[i][2], twoPointLines[i][3])
+            inter := line_intersect_point(L, twoPointLines[i])
+            twoIntersects[tii] = inter
+            tii++
+            if tii > 1 {
+                break
+            }
+        }
+    }
+
+/*
+    while (start_x < (max_x - radius)) {
+        L = TwoPointLine from [start_x, min_y - 1] to [start_x, max_y + 1]
+        two_intersects = [2]
+        foreach TwoPointLine as P in polygon {
+            intersection = between P and L
+            if intersection is within P {
+                two_intersects.append(intersection)
+            }
+        }
+        all_lines.append(TwoPointLine(two_intersects))
+        start_x = start_x + distance_between_lines
+    }
+*/
+    return allPoints
 }
 
 func BoundingBox(ls orb.LineString) orb.LineString {
