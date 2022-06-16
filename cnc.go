@@ -46,6 +46,9 @@ func main() {
     mycmd := flag.NewFlagSet("mirrory", flag.ExitOnError)
     myeco := mycmd.Bool("echo", false, "Echo the input geometry")
 
+    bbcmd := flag.NewFlagSet("bbox", flag.ExitOnError)
+    bbeco := bbcmd.Bool("echo", false, "Echo the input geometry")
+
     tpcmd := flag.NewFlagSet("toolpath", flag.ExitOnError)
     tpeco := tpcmd.Bool("echo", false, "Echo the input geometry")
     tprad := tpcmd.Float64("radius", 1.5, "Radius of cutting tool")
@@ -96,6 +99,15 @@ func main() {
                     fmt.Println(wkt.MarshalString(lss[i]))
                 }
                 fin := cnclib.MirrorY(lss[i])
+                fmt.Println(wkt.MarshalString(fin))
+            }
+        case "bbox":
+            bbcmd.Parse(os.Args[2:])
+            for i := 0; i < len(lss); i++ {
+                if *bbeco {
+                    fmt.Println(wkt.MarshalString(lss[i]))
+                }
+                fin := cnclib.BoundingBox(lss[i])
                 fmt.Println(wkt.MarshalString(fin))
             }
         case "reverse":

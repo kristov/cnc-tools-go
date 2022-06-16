@@ -63,6 +63,36 @@ func LineStringToTwoPointLines(ls orb.LineString) []TwoPointLine {
     return tpl
 }
 
+func BoundingBox(ls orb.LineString) orb.LineString {
+    var bb = make(orb.LineString, 5)
+    min, max := polygonBounds(ls)
+    bb[0] = orb.Point{min[0], min[1]}
+    bb[1] = orb.Point{max[0], min[1]}
+    bb[2] = orb.Point{max[0], max[1]}
+    bb[3] = orb.Point{min[0], max[1]}
+    bb[4] = orb.Point{min[0], min[1]}
+    return bb
+}
+
+func polygonBounds(ls orb.LineString) (orb.Point, orb.Point) {
+    var minx, miny, maxx, maxy float64 = math.MaxFloat64, math.MaxFloat64, 0, 0
+    for i := 0; i < len(ls); i++ {
+        if ls[i][0] > maxx {
+            maxx = ls[i][0]
+        }
+        if ls[i][0] < minx {
+            minx = ls[i][0]
+        }
+        if ls[i][1] > maxy {
+            maxy = ls[i][1]
+        }
+        if ls[i][1] < miny {
+            miny = ls[i][1]
+        }
+    }
+    return orb.Point{minx, miny}, orb.Point{maxx, maxy}
+}
+
 func line_intersect_point(a TwoPointLine, b TwoPointLine) orb.Point {
     sxa := a.Sx
     sya := a.Sy
