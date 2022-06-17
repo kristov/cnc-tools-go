@@ -90,6 +90,19 @@ func PointInPoly(x, y float64, ls orb.LineString) bool {
     return c
 }
 
+func PolyFillNew(ls orb.LineString, toolrad float64) orb.LineString {
+    // 1) Create a 2d array of resolution 90% of the tool diameter
+    // 2) Scan X,Y at this 90% of the tool diameter
+    // 3) Call PointInPoly and if true set value to 1 in 2d array
+    // 4) Now have rasterized grid where all 1s are inside the poly
+    // 5) Scan 2d array and search for first nr 1
+    // 6) From that point walk down until next point is not 1
+    // 7) Check right and if 1 walk up from there until next point is not 1
+    // 8) Each visit mark point as 2
+    // 9) When finished append that linestring
+    // 10) Repeat from 4) until no more 1s are found
+}
+
 func LineString2PointLines(ls orb.LineString) []line2d.PointLine {
     tpl := make([]line2d.PointLine, 0, len(ls) - 1)
     for i := 1; i < len(ls); i++ {
