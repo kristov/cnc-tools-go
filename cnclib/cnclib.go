@@ -64,6 +64,32 @@ func LineStringToTwoPointLines(ls orb.LineString) []TwoPointLine {
     return tpl
 }
 
+func PointInPoly(x, y float64, ls orb.LineString) bool {
+    plen := len(ls)
+    j := plen - 1
+    c := false
+    for i := 0; i < len(ls); i++ {
+        spt := ls[j]
+        ept := ls[i]
+        if (x == ept[0]) && (y == ept[1]) {
+            return true
+        }
+        if (ept[1] > y) != (spt[1] > y) {
+            dx := spt[0] - ept[0]
+            dy := spt[1] - ept[1]
+            slope := ((x - ept[0]) * dy) - ((y - ept[1]) * dx)
+            if slope == 0 {
+                return true
+            }
+            if (slope < 0) != (spt[1] < ept[1]) {
+                c = !c
+            }
+        }
+        j = i
+    }
+    return c
+}
+
 func LineString2PointLines(ls orb.LineString) []line2d.PointLine {
     tpl := make([]line2d.PointLine, 0, len(ls) - 1)
     for i := 1; i < len(ls); i++ {
