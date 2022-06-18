@@ -82,3 +82,9 @@ func TestToolPath(t *testing.T) {
         t.Log("Toolpath point wrong")
     }
 }
+
+func TestPolyFillNew(t *testing.T) {
+    //cwls := orb.LineString{orb.Point{0,0},orb.Point{0,10},orb.Point{10,10},orb.Point{10,0},orb.Point{0,0}}
+    cwls := orb.LineString{orb.Point{7.07,0},orb.Point{0,7.07},orb.Point{7.07,14.14},orb.Point{14.14,7.07},orb.Point{7.07,0}}
+    PolyFillNew(cwls, 0.8)
+}

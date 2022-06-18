@@ -1,6 +1,7 @@
 package cnclib
 
 import (
+        "fmt"
     "math"
     "cnc-tools-go/line2d"
     "github.com/paulmach/orb"
@@ -90,7 +91,78 @@ func PointInPoly(x, y float64, ls orb.LineString) bool {
     return c
 }
 
-func PolyFillNew(ls orb.LineString, toolrad float64) orb.LineString {
+type PolyFillRaster struct {
+    Sx uint32
+    Sy uint32
+    Raster []uint8
+}
+
+func polyfillTracePath(rst *PolyFillRaster, sx, sy uint32) orb.LineString {
+/*
+    var reverse bool = false
+    rst.Raster[(sy * rst.Sx) + sx] = 2
+    for {
+        if reverse {
+            sy = sy - 1
+        } else {
+            sy = sy + 1
+        }
+        if rst.Raster[(sy * rst.Sx) + sx] == 1 {
+        }
+    }
+*/
+    return orb.LineString{}
+}
+
+func polyfillFindPath(rst *PolyFillRaster) orb.LineString {
+    var y, x uint32
+    for y = 0; y < rst.Sy; y++ {
+        for x = 0; x < rst.Sx; x++ {
+            if rst.Raster[(y * rst.Sx) + x] == 1 {
+                return polyfillTracePath(rst, x, y)
+            }
+        }
+    }
+    return orb.LineString{}
+}
+
+func PolyFillNew(ls orb.LineString, toolrad float64) orb.MultiLineString {
+    min, max := PolygonBounds(ls)
+    var line_sep = (toolrad * 2) * 0.9;
+    rxdim := uint32(math.Round((max[0] - min[0]) / line_sep))
+    rydim := uint32(math.Round((max[1] - min[1]) / line_sep))
+    rst := new(PolyFillRaster)
+    rst.Sx = rxdim
+    rst.Sy = rydim
+    rst.Raster = make([]uint8, rxdim * rydim)
+    var y, x uint32
+    for y = 0; y < rst.Sy; y++ {
+        for x = 0; x < rst.Sx; x++ {
+            if PointInPoly(float64(x) * line_sep, float64(y) * line_sep, ls) {
+                rst.Raster[(y * rst.Sx) + x] = 1
+            } else {
+                rst.Raster[(y * rst.Sx) + x] = 0
+            }
+        }
+    }
+    for y = 0; y < rst.Sy; y++ {
+        for x = 0; x < rst.Sx; x++ {
+            if rst.Raster[(y * rst.Sx) + x] == 1 {
+                fmt.Print("#")
+            } else {
+                fmt.Print(".")
+            }
+        }
+        fmt.Print("\n")
+    }
+    paths := make(orb.MultiLineString, 0)
+    for {
+        path := polyfillFindPath(rst)
+        if len(path) == 0 {
+            break
+        }
+        paths = append(paths, path)
+    }
     // 1) Create a 2d array of resolution 90% of the tool diameter
     // 2) Scan X,Y at this 90% of the tool diameter
     // 3) Call PointInPoly and if true set value to 1 in 2d array
@@ -101,6 +173,7 @@ func PolyFillNew(ls orb.LineString, toolrad float64) orb.LineString {
     // 8) Each visit mark point as 2
     // 9) When finished append that linestring
     // 10) Repeat from 4) until no more 1s are found
+    return paths
 }
 
 func LineString2PointLines(ls orb.LineString) []line2d.PointLine {
@@ -112,7 +185,7 @@ func LineString2PointLines(ls orb.LineString) []line2d.PointLine {
 }
 
 func PolyFill(ls orb.LineString, toolrad float64) orb.LineString {
-    min, max := polygonBounds(ls)
+    min, max := PolygonBounds(ls)
 
     // Start and end the polyfill lines off from the edge of the polygon.
     var startx = min[0] + toolrad
@@ -180,7 +253,7 @@ func PolyFill(ls orb.LineString, toolrad float64) orb.LineString {
 
 func BoundingBox(ls orb.LineString) orb.LineString {
     var bb = make(orb.LineString, 5)
-    min, max := polygonBounds(ls)
+    min, max := PolygonBounds(ls)
     bb[0] = orb.Point{min[0], min[1]}
     bb[1] = orb.Point{max[0], min[1]}
     bb[2] = orb.Point{max[0], max[1]}
@@ -189,7 +262,7 @@ func BoundingBox(ls orb.LineString) orb.LineString {
     return bb
 }
 
-func polygonBounds(ls orb.LineString) (orb.Point, orb.Point) {
+func PolygonBounds(ls orb.LineString) (orb.Point, orb.Point) {
     var minx, miny, maxx, maxy float64 = math.MaxFloat64, math.MaxFloat64, 0, 0
     for i := 0; i < len(ls); i++ {
         if ls[i][0] > maxx {
