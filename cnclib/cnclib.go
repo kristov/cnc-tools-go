@@ -1,7 +1,7 @@
 package cnclib
 
 import (
-        "fmt"
+//        "fmt"
     "math"
     "cnc-tools-go/line2d"
     "github.com/paulmach/orb"
@@ -94,24 +94,64 @@ func PointInPoly(x, y float64, ls orb.LineString) bool {
 type PolyFillRaster struct {
     Sx uint32
     Sy uint32
+    Conv float64
     Raster []uint8
 }
 
+func polyfillPoint(rst *PolyFillRaster, x, y uint32) orb.Point {
+    return orb.Point{zify(float64(x) * rst.Conv),zify(float64(y) * rst.Conv)}
+}
+
+func polyfillCanPoint(rst *PolyFillRaster, sx, sy uint32, yincr int8) bool {
+    if (yincr < 0) && (sy == 0) {
+        return false
+    }
+    if (yincr > 0) && (sy == (rst.Sy - 1)) {
+        return false
+    }
+    if sx == (rst.Sx - 1) {
+        return false
+    }
+    if rst.Raster[(sy * rst.Sx) + sx] != 1 {
+        return false
+    }
+    return true
+}
+
 func polyfillTracePath(rst *PolyFillRaster, sx, sy uint32) orb.LineString {
-/*
-    var reverse bool = false
+    var yincr bool = true
+    path := make(orb.LineString, 0)
+    path = append(path, polyfillPoint(rst, sx, sy))
     rst.Raster[(sy * rst.Sx) + sx] = 2
     for {
-        if reverse {
-            sy = sy - 1
+        var canVert bool = true
+        if yincr {
+            if ((sy + 1) == rst.Sy) || (rst.Raster[((sy + 1) * rst.Sx) + sx] != 1) {
+                canVert = false
+            }
         } else {
-            sy = sy + 1
+            if (sy == 0) || (rst.Raster[((sy - 1) * rst.Sx) + sx] != 1) {
+                canVert = false
+            }
         }
-        if rst.Raster[(sy * rst.Sx) + sx] == 1 {
+        if !canVert {
+            if ((sx + 1) == rst.Sx) || (rst.Raster[(sy * rst.Sx) + (sx + 1)] != 1) {
+                path = append(path, polyfillPoint(rst, sx, sy))
+                break
+            }
+            sx = sx + 1
+            yincr = !yincr
+        } else {
+            if yincr {
+                sy = sy + 1
+            } else {
+                sy = sy - 1
+            }
         }
+        path = append(path, polyfillPoint(rst, sx, sy))
+        rst.Raster[(sy * rst.Sx) + sx] = 2
     }
-*/
-    return orb.LineString{}
+    return path
 }
 
 func polyfillFindPath(rst *PolyFillRaster) orb.LineString {
@@ -126,7 +166,7 @@ func polyfillFindPath(rst *PolyFillRaster) orb.LineString {
     return orb.LineString{}
 }
 
-func PolyFillNew(ls orb.LineString, toolrad float64) orb.MultiLineString {
+func PolyFill(ls orb.LineString, toolrad float64) orb.MultiLineString {
     min, max := PolygonBounds(ls)
     var line_sep = (toolrad * 2) * 0.9;
     rxdim := uint32(math.Round((max[0] - min[0]) / line_sep))
@@ -134,6 +174,7 @@ func PolyFillNew(ls orb.LineString, toolrad float64) orb.MultiLineString {
     rst := new(PolyFillRaster)
     rst.Sx = rxdim
     rst.Sy = rydim
+    rst.Conv = line_sep
     rst.Raster = make([]uint8, rxdim * rydim)
     var y, x uint32
     for y = 0; y < rst.Sy; y++ {
@@ -145,16 +186,6 @@ func PolyFillNew(ls orb.LineString, toolrad float64) orb.MultiLineString {
             }
         }
     }
-    for y = 0; y < rst.Sy; y++ {
-        for x = 0; x < rst.Sx; x++ {
-            if rst.Raster[(y * rst.Sx) + x] == 1 {
-                fmt.Print("#")
-            } else {
-                fmt.Print(".")
-            }
-        }
-        fmt.Print("\n")
-    }
     paths := make(orb.MultiLineString, 0)
     for {
         path := polyfillFindPath(rst)
@@ -163,6 +194,20 @@ func PolyFillNew(ls orb.LineString, toolrad float64) orb.MultiLineString {
         }
         paths = append(paths, path)
     }
+/*
+    for y = 0; y < rst.Sy; y++ {
+        for x = 0; x < rst.Sx; x++ {
+            if rst.Raster[(y * rst.Sx) + x] == 1 {
+                fmt.Print("#")
+            } else if rst.Raster[(y * rst.Sx) + x] == 2 {
+                fmt.Print("@")
+            } else {
+                fmt.Print(".")
+            }
+        }
+        fmt.Print("\n")
+    }
+*/
     // 1) Create a 2d array of resolution 90% of the tool diameter
     // 2) Scan X,Y at this 90% of the tool diameter
     // 3) Call PointInPoly and if true set value to 1 in 2d array
@@ -182,73 +227,6 @@ func LineString2PointLines(ls orb.LineString) []line2d.PointLine {
         tpl = append(tpl, line2d.PointLine{ls[i-1][0],ls[i-1][1],ls[i][0],ls[i][1]})
     }
     return tpl
-}
-
-func PolyFill(ls orb.LineString, toolrad float64) orb.LineString {
-    min, max := PolygonBounds(ls)
-
-    // Start and end the polyfill lines off from the edge of the polygon.
-    var startx = min[0] + toolrad
-    var endx = max[0] - toolrad
-
-    // make distance between lines 90% of the tool diameter.
-    var distance_between_lines = (toolrad * 2) * 0.9;
-
-    // Convert out LineString into line2d PointLine objects because thats where
-    // our intersection logic is.
-    pointLines := LineString2PointLines(ls)
-    lines := make(orb.LineString, 0)
-
-    // These are the indexes of the start point and end point of each pass.
-    // These are flipped on each line so the fill lines make a snake trail.
-    var sp uint32 = 0
-    var ep uint32 = 1
-
-    for {
-        // While we have not reached the right hand edge of the polygon
-        if startx >= endx {
-            break
-        }
-
-        // Generate a vertical line at startx
-        L := line2d.PointLine{startx,min[1],startx,max[1]}
-
-        // We are expecting two intersections, one at the bottom of the
-        // polygon, one at the top.
-        twoInts := make([]line2d.Point, 2)
-
-        // Index to hold one of the two the intersection points
-        var ti uint32 = 0
-
-        // Loop over all the lines in the polygon and look for an intersection
-        // point with our vertical line.
-        for i := 0; i < len(pointLines); i++ {
-            ipoint, inter := line2d.PointLineIntersect(L, pointLines[i])
-            if !inter {
-                continue
-            }
-            twoInts[ti] = ipoint
-            ti++
-            if ti > 1 {
-                // TODO: we actually need to handle this case for polygons with
-                // "dips" inward. These need to break the polyfill lines in two
-                // (or more) with a tool lift inbetween. This means PolyFill()
-                // will need to return a MULTILINESTRING geometry.
-                break
-            }
-        }
-        // Advance the vertical line across to the right.
-        startx += distance_between_lines
-        if ti == 2 {
-            // If we have two intersection points then append them to the LineString.
-            lines = append(lines, orb.Point{twoInts[sp][0],twoInts[sp][1]})
-            lines = append(lines, orb.Point{twoInts[ep][0],twoInts[ep][1]})
-            // Flip these variables for the "snake" effect.
-            sp = 1 - sp
-            ep = 1 - ep
-        }
-    }
-    return lines
 }
 
 func BoundingBox(ls orb.LineString) orb.LineString {
