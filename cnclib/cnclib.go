@@ -94,12 +94,14 @@ func PointInPoly(x, y float64, ls orb.LineString) bool {
 type PolyFillRaster struct {
     Sx uint32
     Sy uint32
+    Ox float64
+    Oy float64
     Conv float64
     Raster []uint8
 }
 
 func polyfillPoint(rst *PolyFillRaster, x, y uint32) orb.Point {
-    return orb.Point{zify(float64(x) * rst.Conv),zify(float64(y) * rst.Conv)}
+    return orb.Point{zify((float64(x) * rst.Conv) + rst.Ox),zify((float64(y) * rst.Conv) + rst.Oy)}
 }
 
 func polyfillCanPoint(rst *PolyFillRaster, sx, sy uint32, yincr int8) bool {
@@ -174,12 +176,14 @@ func PolyFill(ls orb.LineString, toolrad float64) orb.MultiLineString {
     rst := new(PolyFillRaster)
     rst.Sx = rxdim
     rst.Sy = rydim
+    rst.Ox = min[0]
+    rst.Oy = min[1]
     rst.Conv = line_sep
     rst.Raster = make([]uint8, rxdim * rydim)
     var y, x uint32
     for y = 0; y < rst.Sy; y++ {
         for x = 0; x < rst.Sx; x++ {
-            if PointInPoly(float64(x) * line_sep, float64(y) * line_sep, ls) {
+            if PointInPoly((float64(x) * line_sep) + rst.Oy, (float64(y) * line_sep) + rst.Oy, ls) {
                 rst.Raster[(y * rst.Sx) + x] = 1
             } else {
                 rst.Raster[(y * rst.Sx) + x] = 0
