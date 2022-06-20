@@ -104,17 +104,32 @@ func polyfillPoint(rst *PolyFillRaster, x, y uint32) orb.Point {
     return orb.Point{zify((float64(x) * rst.Conv) + rst.Ox),zify((float64(y) * rst.Conv) + rst.Oy)}
 }
 
-func polyfillCanPoint(rst *PolyFillRaster, sx, sy uint32, yincr int8) bool {
-    if (yincr < 0) && (sy == 0) {
-        return false
+func polyfillCanMove(rst *PolyFillRaster, x, y uint32, dx, dy int8) bool {
+    if dx < 0 {
+        if x == 0 {
+            return false
+        }
+        x = x - 1
     }
-    if (yincr > 0) && (sy == (rst.Sy - 1)) {
-        return false
+    if dy < 0 {
+        if y == 0 {
+            return false
+        }
+        y = y - 1
     }
-    if sx == (rst.Sx - 1) {
-        return false
+    if dx > 0 {
+        x = x + 1
+        if x == rst.Sx {
+            return false
+        }
     }
-    if rst.Raster[(sy * rst.Sx) + sx] != 1 {
+    if dy > 0 {
+        y = y + 1
+        if y == rst.Sy {
+            return false
+        }
+    }
+    if rst.Raster[(y * rst.Sx) + x] != 1 {
         return false
     }
     return true
@@ -126,28 +141,57 @@ func polyfillTracePath(rst *PolyFillRaster, sx, sy uint32) orb.LineString {
     path = append(path, polyfillPoint(rst, sx, sy))
     rst.Raster[(sy * rst.Sx) + sx] = 2
     for {
-        var canVert bool = true
-        if yincr {
-            if ((sy + 1) == rst.Sy) || (rst.Raster[((sy + 1) * rst.Sx) + sx] != 1) {
-                canVert = false
-            }
-        } else {
-            if (sy == 0) || (rst.Raster[((sy - 1) * rst.Sx) + sx] != 1) {
-                canVert = false
-            }
+        if yincr && polyfillCanMove(rst, sx, sy, 0, 1) {
+            sy = sy + 1
+            path = append(path, polyfillPoint(rst, sx, sy))
+            rst.Raster[(sy * rst.Sx) + sx] = 2
+            continue
         }
-        if !canVert {
-            if ((sx + 1) == rst.Sx) || (rst.Raster[(sy * rst.Sx) + (sx + 1)] != 1) {
+        if !yincr && polyfillCanMove(rst, sx, sy, 0, -1) {
+            sy = sy - 1
+            path = append(path, polyfillPoint(rst, sx, sy))
+            rst.Raster[(sy * rst.Sx) + sx] = 2
+            continue
+        }
+        if yincr {
+            // If we are moving positive Y
+            if polyfillCanMove(rst, sx, sy, 1, 1) {
+                // We can we move diagonally up and to the right
+                sx = sx + 1
+                sy = sy + 1
+                yincr = !yincr
+            } else if polyfillCanMove(rst, sx, sy, 1, 0) {
+                // We can move directly to the right
+                sx = sx + 1
+                yincr = !yincr
+            } else if polyfillCanMove(rst, sx, sy, 1, -1) {
+                // We can we move diagonally down and to the right
+                sx = sx + 1
+                sy = sy - 1
+                yincr = !yincr
+            } else {
                 path = append(path, polyfillPoint(rst, sx, sy))
                 break
             }
-            sx = sx + 1
-            yincr = !yincr
         } else {
-            if yincr {
-                sy = sy + 1
-            } else {
+            // If we are moving down...
+            if polyfillCanMove(rst, sx, sy, 1, -1) {
+                // We can we move diagonally down and to the right
+                sx = sx + 1
                 sy = sy - 1
+                yincr = !yincr
+            } else if polyfillCanMove(rst, sx, sy, 1, 0) {
+                // We can move directly to the right
+                sx = sx + 1
+                yincr = !yincr
+            } else if polyfillCanMove(rst, sx, sy, 1, 1) {
+                // We can we move diagonally down and to the right
+                sx = sx + 1
+                sy = sy + 1
+                yincr = !yincr
+            } else {
+                path = append(path, polyfillPoint(rst, sx, sy))
+                break
             }
         }
         path = append(path, polyfillPoint(rst, sx, sy))
@@ -170,6 +214,7 @@ func polyfillFindPath(rst *PolyFillRaster) orb.LineString {
 
 func PolyFill(ls orb.LineString, toolrad float64) orb.MultiLineString {
     min, max := PolygonBounds(ls)
+    //fmt.Printf("min: %0.2f,%0.2f, max: %0.2f,%0.2f\n", min[0], min[1], max[0], max[1])
     var line_sep = (toolrad * 2) * 0.9;
     rxdim := uint32(math.Round((max[0] - min[0]) / line_sep))
     rydim := uint32(math.Round((max[1] - min[1]) / line_sep))
