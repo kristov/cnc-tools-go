@@ -32,6 +32,7 @@ type Context struct {
     Maxx int
     Maxy int
     Scale float64
+    Png string
 }
 
 func main() {
@@ -49,6 +50,7 @@ func main() {
     flag.IntVar(&ctx.Maxx, "maxx", 200, "Maximum X travel on machine")
     flag.IntVar(&ctx.Maxy, "maxy", 290, "Maximum Y travel on machine")
     flag.Float64Var(&ctx.Scale, "zoom", 1.0, "Zoom level")
+    flag.StringVar(&ctx.Png, "png", "", "Save as PNG")
     flag.Parse()
 
     var things []orb.Geometry
@@ -65,6 +67,13 @@ func main() {
     }
     lss := cnclib.GeometryToLineStrings(things)
 
+    if len(ctx.Png) > 0 {
+        os.Exit(0)
+    }
+    glfwMainLoop(ctx, lss)
+}
+
+func glfwMainLoop(ctx Context, lss []orb.LineString) {
     if err := glfw.Init(); err != nil {
         panic(err)
     }

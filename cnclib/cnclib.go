@@ -16,11 +16,10 @@ type TwoPointLine struct {
 }
 
 func ToolPath(ls orb.LineString, toolrad float64) orb.LineString {
-    fin := make(orb.LineString, 0, len(ls))
     if len(ls) < 2 {
-        return fin
+        return orb.LineString{}
     }
-    tpn := make([]TwoPointLine, 0, len(ls) - 1)
+    tpn := make([]line2d.PointLine, len(ls) - 1)
     var ep orb.Point = ls[0]
     for i := 1; i < len(ls); i++ {
         sx := ls[i-1][0]
@@ -28,31 +27,32 @@ func ToolPath(ls orb.LineString, toolrad float64) orb.LineString {
         ex := ls[i][0]
         ey := ls[i][1]
         ep = ls[i]
-        dx := ex - sx
-        dy := ey - sy
-        angle := math.Atan(dy / dx)
-        if dx < 0 {
-            angle = angle + math.Pi
-        }
+        pl := line2d.PointLine{sx,sy,ex,ey}
+        angle := line2d.PointLineAngle(pl)
         nangle := angle - (math.Pi / 2)
         nx := math.Cos(nangle) * toolrad
         ny := math.Sin(nangle) * toolrad
-        tpn = append(tpn, TwoPointLine{zify(sx+nx),zify(sy+ny),zify(ex+nx),zify(ey+ny)})
+        tpn[i-1] = line2d.PointLine{sx+nx,sy+ny,ex+nx,ey+ny}
     }
-    var end TwoPointLine = tpn[0]
-    fin = append(fin, orb.Point{zify(tpn[0].Sx), zify(tpn[0].Sy)})
+    var end line2d.PointLine = tpn[0]
+    points := make([]line2d.Point, len(ls))
+    points[0] = line2d.Point{tpn[0][0],tpn[0][1]}
     for i := 1; i < len(tpn); i++ {
         end = tpn[i]
-        p := line_intersect_point(tpn[i-1], tpn[i])
-        fin = append(fin, p)
+        p, _ := line2d.LineIntersect(line2d.PointLine2Line(tpn[i-1]), line2d.PointLine2Line(tpn[i]))
+        points[i] = p
     }
     if (ls[0][0] == ep[0]) && (ls[0][1] == ep[1]) {
-        p := line_intersect_point(end, tpn[0])
-        fin = append(fin, p)
-        fin[0][0] = p[0]
-        fin[0][1] = p[1]
+        p, _ := line2d.LineIntersect(line2d.PointLine2Line(end), line2d.PointLine2Line(tpn[0]))
+        points[len(tpn)] = p
+        points[0][0] = p[0]
+        points[0][1] = p[1]
     } else {
-        fin = append(fin, orb.Point{zify(end.Ex), zify(end.Ey)})
+        points[len(tpn)] = line2d.Point{end[2],end[3]}
+    }
+    fin := make(orb.LineString, len(ls))
+    for i := 0; i < len(points); i++ {
+        fin[i] = orb.Point{points[i][0],points[i][1]}
     }
     return fin
 }
@@ -274,6 +274,25 @@ func BoundingBox(ls orb.LineString) orb.LineString {
     bb[3] = orb.Point{min[0], max[1]}
     bb[4] = orb.Point{min[0], min[1]}
     return bb
+}
+
+func BoundingBoxMulti(lss []orb.LineString) {
+    var min, max orb.Point = orb.Point{math.MaxFloat64,math.MaxFloat64}, orb.Point{0,0}
+    for i := 1; i < len(lss); i++ {
+        lmin, lmax := PolygonBounds(lss[i])
+        if lmax[0] > max[0] {
+            max[0] = lmax[0]
+        }
+        if lmin[0] < min[0] {
+            min[0] = lmin[0]
+        }
+        if lmax[1] > max[1] {
+            max[1] = lmax[1]
+        }
+        if lmin[1] < min[1] {
+            min[1] = lmin[1]
+        }
+    }
 }
 
 func PolygonBounds(ls orb.LineString) (orb.Point, orb.Point) {
