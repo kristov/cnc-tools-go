@@ -94,14 +94,12 @@ func PointInPoly(x, y float64, ls orb.LineString) bool {
 type PolyFillRaster struct {
     Sx uint32
     Sy uint32
-    Ox float64
-    Oy float64
     Conv float64
     Raster []uint8
 }
 
 func polyfillPoint(rst *PolyFillRaster, x, y uint32) orb.Point {
-    return orb.Point{zify((float64(x) * rst.Conv) + rst.Ox),zify((float64(y) * rst.Conv) + rst.Oy)}
+    return orb.Point{zify(float64(x) * rst.Conv),zify(float64(y) * rst.Conv)}
 }
 
 func polyfillCanMove(rst *PolyFillRaster, x, y uint32, dx, dy int8) bool {
@@ -214,6 +212,7 @@ func polyfillFindPath(rst *PolyFillRaster) orb.LineString {
 
 func PolyFill(ls orb.LineString, toolrad float64) orb.MultiLineString {
     min, max := PolygonBounds(ls)
+    lstr := Translate(ls, 0 - min[0], 0 - min[1])
     //fmt.Printf("min: %0.2f,%0.2f, max: %0.2f,%0.2f\n", min[0], min[1], max[0], max[1])
     var line_sep = (toolrad * 2) * 0.9;
     rxdim := uint32(math.Round((max[0] - min[0]) / line_sep))
@@ -221,14 +220,12 @@ func PolyFill(ls orb.LineString, toolrad float64) orb.MultiLineString {
     rst := new(PolyFillRaster)
     rst.Sx = rxdim
     rst.Sy = rydim
-    rst.Ox = min[0]
-    rst.Oy = min[1]
     rst.Conv = line_sep
     rst.Raster = make([]uint8, rxdim * rydim)
     var y, x uint32
     for y = 0; y < rst.Sy; y++ {
         for x = 0; x < rst.Sx; x++ {
-            if PointInPoly((float64(x) * line_sep) + rst.Oy, (float64(y) * line_sep) + rst.Oy, ls) {
+            if PointInPoly((float64(x) * line_sep), (float64(y) * line_sep), lstr) {
                 rst.Raster[(y * rst.Sx) + x] = 1
             } else {
                 rst.Raster[(y * rst.Sx) + x] = 0
@@ -241,7 +238,7 @@ func PolyFill(ls orb.LineString, toolrad float64) orb.MultiLineString {
         if len(path) == 0 {
             break
         }
-        paths = append(paths, path)
+        paths = append(paths, Translate(path, min[0], min[1]))
     }
 /*
     for y = 0; y < rst.Sy; y++ {
@@ -257,16 +254,6 @@ func PolyFill(ls orb.LineString, toolrad float64) orb.MultiLineString {
         fmt.Print("\n")
     }
 */
-    // 1) Create a 2d array of resolution 90% of the tool diameter
-    // 2) Scan X,Y at this 90% of the tool diameter
-    // 3) Call PointInPoly and if true set value to 1 in 2d array
-    // 4) Now have rasterized grid where all 1s are inside the poly
-    // 5) Scan 2d array and search for first nr 1
-    // 6) From that point walk down until next point is not 1
-    // 7) Check right and if 1 walk up from there until next point is not 1
-    // 8) Each visit mark point as 2
-    // 9) When finished append that linestring
-    // 10) Repeat from 4) until no more 1s are found
     return paths
 }
 

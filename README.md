@@ -86,6 +86,18 @@ WARNING! The "toolpath" code is broken for negative (hole) cuts containing compl
 
 See how the sharp corners are all messed up? Needs work.
 
+### `polyfill`
+
+This generates a zigzag pattern of lines inside a polygon for the purposes of removing material when a shape is not being cut fully through the material. For example you want to cut a cube shape hole out, but only to a specific depth and not all the way through - you need to remove the material inside the cube.
+
+    cat cube.wkt | cnc polyfill --radius=1.5
+
+Note: The bounds of the polyfill assumes you have already taken the toolpath radius into account. This implies you have pre-processed the shape to build an inner toolpath. For example, if you want to cut out a cube shape 20mm size you probably want this:
+
+     cat cube.wkt | cnc reverse | cnc toolpath --radius=1.5 | cnc polyfill --radius=1.5 --echo
+
+Meaning we first reverse the cube path so that `toolpath` generates an "inner" tool cutting path. We then pipe it to polyfill to cut out that smaller area, and then echo it so we also get the outline cut as one motion.
+
 ## `gcode`
 
 The `gcode` command will generate very basic GCode for each LINESTRING in the input. The `clearance` and `depth` parameters control how the tool is lifted while moving (clearance) and to what height the Z axis will move to when cutting (depth). The default values are meant to be relatively safe (no cutting will take place), assuming Z=0 is where the cutting tool is barely in contact with the work:
@@ -128,6 +140,10 @@ Which will open a window and show the shape on the screen. The mouse wheel will 
     $ cat cube.wkt | cnc rotate --angle=45 | cnc-view2d --maxx=100 --maxy=100
 
 It is actually better to set `maxx` and `maxy` to the size of the *work* piece, which will be on a case-by-case basis. There are also `width` and `height` options for the default size of the window, but resizing the window manually also works.
+
+You can also set the initial zoom with the `zoom` parameter:
+
+    cat cube.wkt | cnc-view2d --zoom=4.2
 
 ## The `svg2wkt` tool
 

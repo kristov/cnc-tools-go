@@ -48,6 +48,7 @@ func main() {
     flag.IntVar(&ctx.Height, "height", 480, "Window height")
     flag.IntVar(&ctx.Maxx, "maxx", 200, "Maximum X travel on machine")
     flag.IntVar(&ctx.Maxy, "maxy", 290, "Maximum Y travel on machine")
+    flag.Float64Var(&ctx.Scale, "zoom", 1.0, "Zoom level")
     flag.Parse()
 
     var things []orb.Geometry
