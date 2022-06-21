@@ -1,7 +1,7 @@
 package cnclib
 
 import (
-//        "fmt"
+        "fmt"
     "math"
     "cnc-tools-go/line2d"
     "github.com/paulmach/orb"
@@ -13,6 +13,19 @@ type TwoPointLine struct {
     Sy float64
     Ex float64
     Ey float64
+}
+
+type PolyFillRaster struct {
+    Sx uint32
+    Sy uint32
+    Conv float64
+    Raster []uint8
+}
+
+type PolyFillVector struct {
+    Sx uint32
+    Sy uint32
+    Yincr bool
 }
 
 func ToolPath(ls orb.LineString, toolrad float64) orb.LineString {
@@ -52,17 +65,9 @@ func ToolPath(ls orb.LineString, toolrad float64) orb.LineString {
     }
     fin := make(orb.LineString, len(ls))
     for i := 0; i < len(points); i++ {
-        fin[i] = orb.Point{points[i][0],points[i][1]}
+        fin[i] = orb.Point{zify(points[i][0]),zify(points[i][1])}
     }
     return fin
-}
-
-func LineStringToTwoPointLines(ls orb.LineString) []TwoPointLine {
-    tpl := make([]TwoPointLine, 0, len(ls) - 1)
-    for i := 1; i < len(ls); i++ {
-        tpl = append(tpl, TwoPointLine{ls[i-1][0],ls[i-1][1],ls[i][0],ls[i][1]})
-    }
-    return tpl
 }
 
 func PointInPoly(x, y float64, ls orb.LineString) bool {
@@ -89,13 +94,6 @@ func PointInPoly(x, y float64, ls orb.LineString) bool {
         j = i
     }
     return c
-}
-
-type PolyFillRaster struct {
-    Sx uint32
-    Sy uint32
-    Conv float64
-    Raster []uint8
 }
 
 func polyfillPoint(rst *PolyFillRaster, x, y uint32) orb.Point {
@@ -133,81 +131,117 @@ func polyfillCanMove(rst *PolyFillRaster, x, y uint32, dx, dy int8) bool {
     return true
 }
 
-func polyfillTracePath(rst *PolyFillRaster, sx, sy uint32) orb.LineString {
-    var yincr bool = true
+func polyfillMarkAppend(rst *PolyFillRaster, ls orb.LineString, x, y uint32) orb.LineString {
+    ls = append(ls, polyfillPoint(rst, x, y))
+    rst.Raster[(y * rst.Sx) + x] = 2
+    return ls
+}
+
+func polyfillTracePath(rst *PolyFillRaster, pv *PolyFillVector) orb.LineString {
     path := make(orb.LineString, 0)
-    path = append(path, polyfillPoint(rst, sx, sy))
-    rst.Raster[(sy * rst.Sx) + sx] = 2
+    path = polyfillMarkAppend(rst, path, pv.Sx, pv.Sy)
     for {
-        if yincr && polyfillCanMove(rst, sx, sy, 0, 1) {
-            sy = sy + 1
-            path = append(path, polyfillPoint(rst, sx, sy))
-            rst.Raster[(sy * rst.Sx) + sx] = 2
+        if pv.Yincr && polyfillCanMove(rst, pv.Sx, pv.Sy, 0, 1) {
+            // We are moving up and we can go to the next space up
+            rst.Raster[(pv.Sy * rst.Sx) + pv.Sx] = 2
+            pv.Sy = pv.Sy + 1
             continue
         }
-        if !yincr && polyfillCanMove(rst, sx, sy, 0, -1) {
-            sy = sy - 1
-            path = append(path, polyfillPoint(rst, sx, sy))
-            rst.Raster[(sy * rst.Sx) + sx] = 2
+        if !pv.Yincr && polyfillCanMove(rst, pv.Sx, pv.Sy, 0, -1) {
+            // We are moving down and we can go to the next space down
+            rst.Raster[(pv.Sy * rst.Sx) + pv.Sx] = 2
+            pv.Sy = pv.Sy - 1
             continue
         }
-        if yincr {
-            // If we are moving positive Y
-            if polyfillCanMove(rst, sx, sy, 1, 1) {
+        // We can no longer move up or down in this column
+        path = polyfillMarkAppend(rst, path, pv.Sx, pv.Sy)
+        if pv.Yincr {
+            // We are moving up
+            if polyfillCanMove(rst, pv.Sx, pv.Sy, 1, 1) {
                 // We can we move diagonally up and to the right
-                sx = sx + 1
-                sy = sy + 1
-                yincr = !yincr
-            } else if polyfillCanMove(rst, sx, sy, 1, 0) {
+                pv.Sx = pv.Sx + 1
+                pv.Sy = pv.Sy + 1
+                pv.Yincr = false
+                break
+            } else if polyfillCanMove(rst, pv.Sx, pv.Sy, 1, 0) {
                 // We can move directly to the right
-                sx = sx + 1
-                yincr = !yincr
-            } else if polyfillCanMove(rst, sx, sy, 1, -1) {
+                pv.Sx = pv.Sx + 1
+                pv.Yincr = false
+                path = polyfillMarkAppend(rst, path, pv.Sx, pv.Sy)
+                continue
+            } else if polyfillCanMove(rst, pv.Sx, pv.Sy, 1, -1) {
                 // We can we move diagonally down and to the right
-                sx = sx + 1
-                sy = sy - 1
-                yincr = !yincr
+                pv.Sx = pv.Sx + 1
+                pv.Sy = pv.Sy - 1
+                pv.Yincr = false
+                break
             } else {
-                path = append(path, polyfillPoint(rst, sx, sy))
+                // We can not move anywhere, return to rescan
                 break
             }
         } else {
-            // If we are moving down...
-            if polyfillCanMove(rst, sx, sy, 1, -1) {
+            // If we are moving down
+            if polyfillCanMove(rst, pv.Sx, pv.Sy, 1, -1) {
                 // We can we move diagonally down and to the right
-                sx = sx + 1
-                sy = sy - 1
-                yincr = !yincr
-            } else if polyfillCanMove(rst, sx, sy, 1, 0) {
+                pv.Sx = pv.Sx + 1
+                pv.Sy = pv.Sy - 1
+                pv.Yincr = true
+                break
+            } else if polyfillCanMove(rst, pv.Sx, pv.Sy, 1, 0) {
                 // We can move directly to the right
-                sx = sx + 1
-                yincr = !yincr
-            } else if polyfillCanMove(rst, sx, sy, 1, 1) {
-                // We can we move diagonally down and to the right
-                sx = sx + 1
-                sy = sy + 1
-                yincr = !yincr
+                pv.Sx = pv.Sx + 1
+                pv.Yincr = true
+                path = polyfillMarkAppend(rst, path, pv.Sx, pv.Sy)
+                continue
+            } else if polyfillCanMove(rst, pv.Sx, pv.Sy, 1, 1) {
+                // We can we move diagonally up and to the right
+                pv.Sx = pv.Sx + 1
+                pv.Sy = pv.Sy + 1
+                pv.Yincr = true
+                break
             } else {
-                path = append(path, polyfillPoint(rst, sx, sy))
+                // We can not move anywhere, return to rescan
                 break
             }
         }
-        path = append(path, polyfillPoint(rst, sx, sy))
-        rst.Raster[(sy * rst.Sx) + sx] = 2
     }
     return path
 }
 
-func polyfillFindPath(rst *PolyFillRaster) orb.LineString {
-    var y, x uint32
-    for y = 0; y < rst.Sy; y++ {
-        for x = 0; x < rst.Sx; x++ {
-            if rst.Raster[(y * rst.Sx) + x] == 1 {
-                return polyfillTracePath(rst, x, y)
+func polyfillFindNext(rst *PolyFillRaster, pv *PolyFillVector) bool {
+    for x := pv.Sx; x < rst.Sx; x++ {
+        if pv.Yincr {
+            for y := pv.Sy; y < rst.Sy; y++ {
+                if rst.Raster[(y * rst.Sx) + x] == 1 {
+                    pv.Sx = x
+                    pv.Sy = y
+                    return true
+                }
+            }
+        } else {
+            for y := pv.Sy; y > 0; y-- {
+                if rst.Raster[(y * rst.Sx) + x] == 1 {
+                    pv.Sx = x
+                    pv.Sy = y
+                    return true
+                }
             }
         }
+        pv.Yincr = !pv.Yincr
     }
-    return orb.LineString{}
+    return false
+}
+
+func polyfillFindPaths(rst *PolyFillRaster) orb.MultiLineString {
+    paths := make(orb.MultiLineString, 0)
+    vector := PolyFillVector{0,0,true}
+    for {
+        if !polyfillFindNext(rst, &vector) {
+            break
+        }
+        paths = append(paths, polyfillTracePath(rst, &vector))
+    }
+    return paths
 }
 
 func PolyFill(ls orb.LineString, toolrad float64) orb.MultiLineString {
@@ -232,15 +266,12 @@ func PolyFill(ls orb.LineString, toolrad float64) orb.MultiLineString {
             }
         }
     }
-    paths := make(orb.MultiLineString, 0)
-    for {
-        path := polyfillFindPath(rst)
-        if len(path) == 0 {
-            break
-        }
-        paths = append(paths, Translate(path, min[0], min[1]))
+    paths := polyfillFindPaths(rst)
+    fin := make(orb.MultiLineString, len(paths))
+    for i := 0; i < len(paths); i++ {
+        fin[i] = Translate(paths[i], min[0], min[1])
     }
-/*
+
     for y = 0; y < rst.Sy; y++ {
         for x = 0; x < rst.Sx; x++ {
             if rst.Raster[(y * rst.Sx) + x] == 1 {
@@ -253,8 +284,8 @@ func PolyFill(ls orb.LineString, toolrad float64) orb.MultiLineString {
         }
         fmt.Print("\n")
     }
-*/
-    return paths
+
+    return fin
 }
 
 func LineString2PointLines(ls orb.LineString) []line2d.PointLine {
