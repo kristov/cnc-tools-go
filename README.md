@@ -46,6 +46,15 @@ Rotate a shape about 0,0 by an angle in degrees:
     $ cat cube.wkt | cnc rotate --angle=45
     LINESTRING(0 0,14.14 14.14,0 28.28,-14.14 14.14,0 0)
 
+### `scale`
+
+Scale a shape by and X any Y factor. A value of 1.0 indicates no scaling:
+
+    $ cat cube.wkt | cnc scale --x=2 --y=2
+    LINESTRING(0 0,40 0,40 40,0 40,0 0)
+
+Negative values seem to have a mirroring effect.
+
 ### `mirrory`
 
 This mirrors the shape in the Y axis (produces a mirror to the left)
