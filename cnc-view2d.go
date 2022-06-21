@@ -56,6 +56,11 @@ func main() {
     var things []orb.Geometry
     scanner := bufio.NewScanner(os.Stdin)
     for scanner.Scan() {
+        text := scanner.Text()
+        runes := []rune(text)
+        if string(runes[0:1]) == ";" {
+            continue
+        }
         geo, err := wkttoorb.Scan(scanner.Text())
         if err != nil {
             panic(err)
