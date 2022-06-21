@@ -45,6 +45,11 @@ func main() {
     roeco := rocmd.Bool("echo", false, "Echo the input geometry")
     roang := rocmd.Float64("angle", 0.0, "Angle of rotation in degrees")
 
+    sccmd := flag.NewFlagSet("scale", flag.ExitOnError)
+    sceco := sccmd.Bool("echo", false, "Echo the input geometry")
+    scxfc := sccmd.Float64("x", 1.0, "Scale factor in X")
+    scyfc := sccmd.Float64("y", 1.0, "Scale factor in Y")
+
     mxcmd := flag.NewFlagSet("mirrorx", flag.ExitOnError)
     mxeco := mxcmd.Bool("echo", false, "Echo the input geometry")
 
@@ -90,6 +95,15 @@ func main() {
                     fmt.Println(wkt.MarshalString(lss[i]))
                 }
                 fin := cnclib.Rotate(lss[i], *roang / 57.29578)
+                fmt.Println(wkt.MarshalString(fin))
+            }
+        case "scale":
+            sccmd.Parse(os.Args[2:])
+            for i := 0; i < len(lss); i++ {
+                if *sceco {
+                    fmt.Println(wkt.MarshalString(lss[i]))
+                }
+                fin := cnclib.Scale(lss[i], *scxfc, *scyfc)
                 fmt.Println(wkt.MarshalString(fin))
             }
         case "mirrorx":

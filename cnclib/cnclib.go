@@ -356,11 +356,21 @@ func Translate(ls orb.LineString, dx, dy float64) orb.LineString {
 }
 
 func Rotate(ls orb.LineString, radians float64) orb.LineString {
-    fin := make(orb.LineString, 0, len(ls))
+    fin := make(orb.LineString, len(ls))
     mat := mgl32.Rotate2D(float32(radians))
     for i := 0; i < len(ls); i++ {
         p := mat.Mul2x1(mgl32.Vec2{float32(ls[i][0]), float32(ls[i][1])})
-        fin = append(fin, orb.Point{zify(float64(p[0])), zify(float64(p[1]))})
+        fin[i] = orb.Point{zify(float64(p[0])), zify(float64(p[1]))}
+    }
+    return fin
+}
+
+func Scale(ls orb.LineString, x, y float64) orb.LineString {
+    fin := make(orb.LineString, len(ls))
+    mat := mgl32.Scale2D(float32(x), float32(y))
+    for i := 0; i < len(ls); i++ {
+        p := mat.Mul3x1(mgl32.Vec3{float32(ls[i][0]), float32(ls[i][1]),0.0})
+        fin[i] = orb.Point{zify(float64(p[0])), zify(float64(p[1]))}
     }
     return fin
 }
